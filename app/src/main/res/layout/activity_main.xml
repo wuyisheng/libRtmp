@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     tools:context="org.yeshen.video.librtmp.ui.MainActivity">
 
-    <org.yeshen.video.librtmp.afix.VideoLivingView
+    <org.yeshen.video.librtmp.afix.LivingView
         android:id="@+id/player"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

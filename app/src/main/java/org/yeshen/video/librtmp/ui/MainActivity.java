@@ -6,13 +6,13 @@ import android.view.View;
 import android.widget.Toast;
 
 import org.yeshen.video.librtmp.R;
-import org.yeshen.video.librtmp.afix.VideoLivingView;
-import org.yeshen.video.librtmp.afix.interfaces.CameraListener;
-import org.yeshen.video.librtmp.afix.interfaces.LivingStartListener;
-import org.yeshen.video.librtmp.net.packer.rtmp.RtmpPacker;
-import org.yeshen.video.librtmp.net.sender.rtmp.RtmpSender;
+import org.yeshen.video.librtmp.afix.LivingView;
+import org.yeshen.video.librtmp.afix.net.packer.rtmp.RtmpPacker;
+import org.yeshen.video.librtmp.afix.net.sender.rtmp.RtmpSender;
+import org.yeshen.video.librtmp.core.delegate.ILivingDelegate;
 import org.yeshen.video.librtmp.tools.Lg;
 import org.yeshen.video.librtmp.tools.Options;
+import org.yeshen.video.librtmp.tools.Toasts;
 
 /*********************************************************************
  * Created by yeshen on 2017/05/17.
@@ -21,7 +21,7 @@ import org.yeshen.video.librtmp.tools.Options;
 
 public class MainActivity extends AppCompatActivity {
 
-    private VideoLivingView mLFLiveView;
+    private LivingView mLFLiveView;
     private RtmpSender mRtmpSender;
     private int mCurrentBps;
 
@@ -43,31 +43,32 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mLFLiveView = (VideoLivingView) findViewById(R.id.player);
-        mLFLiveView.init();
+        mLFLiveView = (LivingView) findViewById(R.id.player);
 
         Options.getInstance().setOrientation(Options.Orientation.PORTRAIT);
         Options.getInstance().setFacing(Options.Facing.BACK);
-        mLFLiveView.setCameraConfiguration();
-
         Options.getInstance().setSize(640, 360);
-        mLFLiveView.setVideoConfiguration();
+        mLFLiveView.syncConfig();
 
-        //设置预览监听
-        mLFLiveView.setCameraOpenListener(new CameraListener() {
+        mLFLiveView.setDelegate(new ILivingDelegate() {
             @Override
-            public void onOpenSuccess() {
-                Toast.makeText(MainActivity.this, "camera open success", Toast.LENGTH_LONG).show();
+            public void cameraSuccess() {
+                Toasts.str("camera open success");
             }
 
             @Override
-            public void onOpenFail(int error) {
-                Toast.makeText(MainActivity.this, "camera open fail", Toast.LENGTH_LONG).show();
+            public void cameraError(int error) {
+                Toasts.str("camera open fail");
             }
 
             @Override
-            public void onCameraChange() {
-                Toast.makeText(MainActivity.this, "camera switch", Toast.LENGTH_LONG).show();
+            public void livingSuccess() {
+                Toasts.str("start living");
+            }
+
+            @Override
+            public void livingFail(int error) {
+                Toasts.str("start living fail");
             }
         });
 
@@ -77,22 +78,64 @@ public class MainActivity extends AppCompatActivity {
         mLFLiveView.setPacker(packer);
         //设置发送器
         mRtmpSender = RtmpSender.getRtmpSender();
-        mRtmpSender.setSenderListener(mSenderListener);
-        mLFLiveView.setSender(mRtmpSender);
-        mLFLiveView.setLivingStartListener(new LivingStartListener() {
+        mRtmpSender.setSenderListener(new RtmpSender.OnSenderListener() {
             @Override
-            public void startError(int error) {
-                //直播失败
-                Toast.makeText(MainActivity.this, "start living fail", Toast.LENGTH_SHORT).show();
+            public void onConnecting() {
+
+            }
+
+            @Override
+            public void onConnected() {
+                mLFLiveView.start();
+                mCurrentBps = Options.getInstance().video.maxBps;
+            }
+
+            @Override
+            public void onDisConnected() {
+                Toast.makeText(MainActivity.this, "fail to live", Toast.LENGTH_SHORT).show();
                 mLFLiveView.stop();
             }
 
             @Override
-            public void startSuccess() {
-                //直播成功
-                Toast.makeText(MainActivity.this, "start living", Toast.LENGTH_SHORT).show();
+            public void onPublishFail() {
+                Toast.makeText(MainActivity.this, "fail to publish stream", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onNetGood() {
+                if (mCurrentBps + 50 <= Options.getInstance().video.maxBps){
+                    Lg.d( "BPS_CHANGE good up 50");
+                    int bps = mCurrentBps + 50;
+                    if(mLFLiveView != null) {
+                        boolean result = mLFLiveView.setVideoBps(bps);
+                        if(result) {
+                            mCurrentBps = bps;
+                        }
+                    }
+                } else {
+                    Lg.d( "BPS_CHANGE good good good");
+                }
+                Lg.d( "Current Bps: " + mCurrentBps);
+            }
+
+            @Override
+            public void onNetBad() {
+                if (mCurrentBps - 100 >= Options.getInstance().video.minBps){
+                    Lg.d( "BPS_CHANGE bad down 100");
+                    int bps = mCurrentBps - 100;
+                    if(mLFLiveView != null) {
+                        boolean result = mLFLiveView.setVideoBps(bps);
+                        if(result) {
+                            mCurrentBps = bps;
+                        }
+                    }
+                } else {
+                    Lg.d( "BPS_CHANGE bad down 100");
+                }
+                Lg.d( "Current Bps: " + mCurrentBps);
             }
         });
+        mLFLiveView.setSender(mRtmpSender);
     }
 
     public void stop() {
@@ -119,65 +162,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onDestroy(){
         super.onDestroy();
-        mLFLiveView.release();
+        mLFLiveView.destroy();
     }
-
-    private RtmpSender.OnSenderListener mSenderListener = new RtmpSender.OnSenderListener() {
-        @Override
-        public void onConnecting() {
-
-        }
-
-        @Override
-        public void onConnected() {
-            mLFLiveView.start();
-            mCurrentBps = Options.getInstance().video.maxBps;
-        }
-
-        @Override
-        public void onDisConnected() {
-            Toast.makeText(MainActivity.this, "fail to live", Toast.LENGTH_SHORT).show();
-            mLFLiveView.stop();
-        }
-
-        @Override
-        public void onPublishFail() {
-            Toast.makeText(MainActivity.this, "fail to publish stream", Toast.LENGTH_SHORT).show();
-        }
-
-        @Override
-        public void onNetGood() {
-            if (mCurrentBps + 50 <= Options.getInstance().video.maxBps){
-                Lg.d( "BPS_CHANGE good up 50");
-                int bps = mCurrentBps + 50;
-                if(mLFLiveView != null) {
-                    boolean result = mLFLiveView.setVideoBps(bps);
-                    if(result) {
-                        mCurrentBps = bps;
-                    }
-                }
-            } else {
-                Lg.d( "BPS_CHANGE good good good");
-            }
-            Lg.d( "Current Bps: " + mCurrentBps);
-        }
-
-        @Override
-        public void onNetBad() {
-            if (mCurrentBps - 100 >= Options.getInstance().video.minBps){
-                Lg.d( "BPS_CHANGE bad down 100");
-                int bps = mCurrentBps - 100;
-                if(mLFLiveView != null) {
-                    boolean result = mLFLiveView.setVideoBps(bps);
-                    if(result) {
-                        mCurrentBps = bps;
-                    }
-                }
-            } else {
-                Lg.d( "BPS_CHANGE bad down 100");
-            }
-            Lg.d( "Current Bps: " + mCurrentBps);
-        }
-    };
 
 }

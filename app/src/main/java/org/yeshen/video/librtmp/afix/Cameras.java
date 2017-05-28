@@ -1,16 +1,15 @@
 package org.yeshen.video.librtmp.afix;
 
-import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 
+import org.yeshen.video.librtmp.core.ICamera;
 import org.yeshen.video.librtmp.exception.CameraHardwareException;
 import org.yeshen.video.librtmp.exception.CameraNotSupportException;
-import org.yeshen.video.librtmp.tools.Lg;
+import org.yeshen.video.librtmp.tools.AndroidUntil;
 import org.yeshen.video.librtmp.tools.Options;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 /*********************************************************************
@@ -18,43 +17,12 @@ import java.util.List;
  * Copyright (c) 2017 yeshen.org. - All Rights Reserved
  *********************************************************************/
 
-public abstract class Cameras {
+public abstract class Cameras implements ICamera {
 
     private static final Cameras sInstance =new CameraImpl();
     public static Cameras instance() {
         return sInstance;
     }
-
-    public abstract CameraMessage getCurrentCamera();
-
-    public abstract boolean isLandscape();
-
-    @SuppressWarnings("deprecation")
-    public abstract Camera openCamera() throws CameraHardwareException, CameraNotSupportException;
-
-    public abstract void setSurfaceTexture(SurfaceTexture texture);
-
-    public abstract State getState();
-
-    public abstract void setConfiguration();
-
-    public abstract void startPreview();
-
-    public abstract void stopPreview();
-
-    public abstract void releaseCamera();
-
-    public abstract void release();
-
-    public abstract void setFocusPoint(int x, int y);
-
-    public abstract boolean autoFocus(Camera.AutoFocusCallback focusCallback);
-
-    public abstract void switchFocusMode();
-
-    public abstract boolean switchCamera();
-
-    public abstract boolean switchLight();
 
     public enum State {
         INIT,
@@ -63,8 +31,6 @@ public abstract class Cameras {
     }
 
     private static class CameraImpl extends Cameras {
-        private static final String TAG = "CameraHolder";
-
         private List<CameraMessage> mCameraMessage;
         private Camera mCameraDevice;
         private CameraMessage mCurrentCamera;
@@ -87,16 +53,15 @@ public abstract class Cameras {
             return (Options.getInstance().camera.orientation != Options.Orientation.PORTRAIT);
         }
 
-        @SuppressWarnings("deprecation")
         @Override
-        public Camera openCamera()
+        public void openCamera()
                 throws CameraHardwareException, CameraNotSupportException {
             if (mCameraMessage == null || mCameraMessage.size() == 0) {
                 mCameraMessage = AndroidUntil.getAllCamerasData(isOpenBackFirst);
             }
             CameraMessage cameraData = mCameraMessage.get(0);
             if (mCameraDevice != null && mCurrentCamera == cameraData) {
-                return mCameraDevice;
+                return;
             }
             if (mCameraDevice != null) {
                 releaseCamera();
@@ -119,11 +84,10 @@ public abstract class Cameras {
             }
             mCurrentCamera = cameraData;
             mState = State.OPENED;
-            return mCameraDevice;
         }
 
         @Override
-        public void setSurfaceTexture(SurfaceTexture texture) {
+        public void placePreview(SurfaceTexture texture) {
             mTexture = texture;
             if (mState == State.PREVIEW && mCameraDevice != null && mTexture != null) {
                 try {
@@ -140,7 +104,7 @@ public abstract class Cameras {
         }
 
         @Override
-        public void setConfiguration() {
+        public void syncConfig() {
             isTouchMode = (Options.getInstance().camera.focusMode != Options.FocusMode.AUTO);
             isOpenBackFirst = (Options.getInstance().camera.facing != Options.Facing.FRONT);
         }
@@ -209,124 +173,6 @@ public abstract class Cameras {
             mTexture = null;
             isTouchMode = false;
             isOpenBackFirst = false;
-        }
-
-        @SuppressWarnings("deprecation")
-        @Override
-        public void setFocusPoint(int x, int y) {
-            if (mState != State.PREVIEW || mCameraDevice == null) {
-                return;
-            }
-            if (x < -1000 || x > 1000 || y < -1000 || y > 1000) {
-                Lg.d(TAG, "setFocusPoint: values are not ideal " + "x= " + x + " y= " + y);
-                return;
-            }
-            Camera.Parameters params = mCameraDevice.getParameters();
-
-            if (params != null && params.getMaxNumFocusAreas() > 0) {
-                List<Camera.Area> focusArea = new ArrayList<>();
-                focusArea.add(new Camera.Area(new Rect(x, y, x + AndroidUntil.FOCUS_WIDTH, y + AndroidUntil.FOCUS_HEIGHT), 1000));
-
-                params.setFocusAreas(focusArea);
-
-                try {
-                    mCameraDevice.setParameters(params);
-                } catch (Exception e) {
-                    // Ignore, we might be setting it too
-                    // fast since previous attempt
-                }
-            } else {
-                Lg.d(TAG, "Not support Touch focus mode");
-            }
-        }
-
-        @SuppressWarnings("deprecation")
-        @Override
-        public boolean autoFocus(Camera.AutoFocusCallback focusCallback) {
-            if (mState != State.PREVIEW || mCameraDevice == null) {
-                return false;
-            }
-            // Make sure our auto settings aren't locked
-            Camera.Parameters params = mCameraDevice.getParameters();
-            if (params.isAutoExposureLockSupported()) {
-                params.setAutoExposureLock(false);
-            }
-
-            if (params.isAutoWhiteBalanceLockSupported()) {
-                params.setAutoWhiteBalanceLock(false);
-            }
-
-            mCameraDevice.setParameters(params);
-            mCameraDevice.cancelAutoFocus();
-            mCameraDevice.autoFocus(focusCallback);
-            return true;
-        }
-
-        private void changeFocusMode(boolean touchMode) {
-            if (mState != State.PREVIEW || mCameraDevice == null || mCurrentCamera == null) {
-                return;
-            }
-            isTouchMode = touchMode;
-            mCurrentCamera.touchFocusMode = touchMode;
-            if (touchMode) {
-                AndroidUntil.setTouchFocusMode(mCameraDevice);
-            } else {
-                AndroidUntil.setAutoFocusMode(mCameraDevice);
-            }
-        }
-
-        @Override
-        public void switchFocusMode() {
-            changeFocusMode(!isTouchMode);
-        }
-
-        @Override
-        public boolean switchCamera() {
-            if (mState != State.PREVIEW) {
-                return false;
-            }
-            try {
-                CameraMessage camera = mCameraMessage.remove(1);
-                mCameraMessage.add(0, camera);
-                openCamera();
-                startPreview();
-                return true;
-            } catch (Exception e) {
-                CameraMessage camera = mCameraMessage.remove(1);
-                mCameraMessage.add(0, camera);
-                try {
-                    openCamera();
-                    startPreview();
-                } catch (Exception e1) {
-                    e1.printStackTrace();
-                }
-                e.printStackTrace();
-                return false;
-            }
-        }
-
-        @SuppressWarnings("deprecation")
-        @Override
-        public boolean switchLight() {
-            if (mState != State.PREVIEW || mCameraDevice == null || mCurrentCamera == null) {
-                return false;
-            }
-            if (!mCurrentCamera.hasLight) {
-                return false;
-            }
-            Camera.Parameters cameraParameters = mCameraDevice.getParameters();
-            if (cameraParameters.getFlashMode().equals(Camera.Parameters.FLASH_MODE_OFF)) {
-                cameraParameters.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
-            } else {
-                cameraParameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-            }
-            try {
-                mCameraDevice.setParameters(cameraParameters);
-                return true;
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
-            }
         }
 
     }
