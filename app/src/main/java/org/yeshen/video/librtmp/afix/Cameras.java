@@ -25,7 +25,7 @@ public abstract class Cameras {
         return sInstance;
     }
 
-    public abstract CameraMessage getCameraData();
+    public abstract CameraMessage getCurrentCamera();
 
     public abstract boolean isLandscape();
 
@@ -65,9 +65,9 @@ public abstract class Cameras {
     private static class CameraImpl extends Cameras {
         private static final String TAG = "CameraHolder";
 
-        private List<CameraMessage> mCameraDatas;
+        private List<CameraMessage> mCameraMessage;
         private Camera mCameraDevice;
-        private CameraMessage mCameraData;
+        private CameraMessage mCurrentCamera;
         private State mState;
         private SurfaceTexture mTexture;
         private boolean isTouchMode = false;
@@ -78,8 +78,8 @@ public abstract class Cameras {
         }
 
         @Override
-        public CameraMessage getCameraData() {
-            return mCameraData;
+        public CameraMessage getCurrentCamera() {
+            return mCurrentCamera;
         }
 
         @Override
@@ -91,11 +91,11 @@ public abstract class Cameras {
         @Override
         public Camera openCamera()
                 throws CameraHardwareException, CameraNotSupportException {
-            if (mCameraDatas == null || mCameraDatas.size() == 0) {
-                mCameraDatas = AndroidUntil.getAllCamerasData(isOpenBackFirst);
+            if (mCameraMessage == null || mCameraMessage.size() == 0) {
+                mCameraMessage = AndroidUntil.getAllCamerasData(isOpenBackFirst);
             }
-            CameraMessage cameraData = mCameraDatas.get(0);
-            if (mCameraDevice != null && mCameraData == cameraData) {
+            CameraMessage cameraData = mCameraMessage.get(0);
+            if (mCameraDevice != null && mCurrentCamera == cameraData) {
                 return mCameraDevice;
             }
             if (mCameraDevice != null) {
@@ -117,7 +117,7 @@ public abstract class Cameras {
                 mCameraDevice = null;
                 throw new CameraNotSupportException();
             }
-            mCameraData = cameraData;
+            mCurrentCamera = cameraData;
             mState = State.OPENED;
             return mCameraDevice;
         }
@@ -199,13 +199,13 @@ public abstract class Cameras {
             }
             mCameraDevice.release();
             mCameraDevice = null;
-            mCameraData = null;
+            mCurrentCamera = null;
             mState = State.INIT;
         }
 
         @Override
         public void release() {
-            mCameraDatas = null;
+            mCameraMessage = null;
             mTexture = null;
             isTouchMode = false;
             isOpenBackFirst = false;
@@ -263,11 +263,11 @@ public abstract class Cameras {
         }
 
         private void changeFocusMode(boolean touchMode) {
-            if (mState != State.PREVIEW || mCameraDevice == null || mCameraData == null) {
+            if (mState != State.PREVIEW || mCameraDevice == null || mCurrentCamera == null) {
                 return;
             }
             isTouchMode = touchMode;
-            mCameraData.touchFocusMode = touchMode;
+            mCurrentCamera.touchFocusMode = touchMode;
             if (touchMode) {
                 AndroidUntil.setTouchFocusMode(mCameraDevice);
             } else {
@@ -286,14 +286,14 @@ public abstract class Cameras {
                 return false;
             }
             try {
-                CameraMessage camera = mCameraDatas.remove(1);
-                mCameraDatas.add(0, camera);
+                CameraMessage camera = mCameraMessage.remove(1);
+                mCameraMessage.add(0, camera);
                 openCamera();
                 startPreview();
                 return true;
             } catch (Exception e) {
-                CameraMessage camera = mCameraDatas.remove(1);
-                mCameraDatas.add(0, camera);
+                CameraMessage camera = mCameraMessage.remove(1);
+                mCameraMessage.add(0, camera);
                 try {
                     openCamera();
                     startPreview();
@@ -308,10 +308,10 @@ public abstract class Cameras {
         @SuppressWarnings("deprecation")
         @Override
         public boolean switchLight() {
-            if (mState != State.PREVIEW || mCameraDevice == null || mCameraData == null) {
+            if (mState != State.PREVIEW || mCameraDevice == null || mCurrentCamera == null) {
                 return false;
             }
-            if (!mCameraData.hasLight) {
+            if (!mCurrentCamera.hasLight) {
                 return false;
             }
             Camera.Parameters cameraParameters = mCameraDevice.getParameters();

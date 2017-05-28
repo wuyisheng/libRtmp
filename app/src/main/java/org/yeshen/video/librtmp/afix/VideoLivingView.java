@@ -1,24 +1,26 @@
 package org.yeshen.video.librtmp.afix;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
+import android.opengl.GLSurfaceView;
 import android.os.Build;
 import android.os.PowerManager;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
+import android.view.SurfaceHolder;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import org.yeshen.video.librtmp.R;
 import org.yeshen.video.librtmp.afix.interfaces.CameraListener;
 import org.yeshen.video.librtmp.afix.interfaces.LivingStartListener;
-import org.yeshen.video.librtmp.android.CameraVideoController;
+import org.yeshen.video.librtmp.android.ControllerAudio;
+import org.yeshen.video.librtmp.android.ControllerCameraVideo;
 import org.yeshen.video.librtmp.android.MyRenderer;
-import org.yeshen.video.librtmp.android.NormalAudioController;
-import org.yeshen.video.librtmp.android.RenderSurfaceView;
-import org.yeshen.video.librtmp.android.StreamController;
+import org.yeshen.video.librtmp.android.ControllerStream;
 import org.yeshen.video.librtmp.net.packer.Packer;
 import org.yeshen.video.librtmp.net.sender.Sender;
 import org.yeshen.video.librtmp.tools.Lg;
@@ -43,13 +45,13 @@ public class VideoLivingView extends FrameLayout {
     public static final int SDK_VERSION_ERROR = 8;
 
     private static final String TAG = VideoLivingView.class.getSimpleName();
-    private StreamController mStreamController;
+    private ControllerStream mControllerStream;
     private PowerManager.WakeLock mWakeLock;
     private CameraListener mOutCameraOpenListener;
     private LivingStartListener mLivingStartListener;
     private WeakHandler mHandler = new WeakHandler();
 
-    protected RenderSurfaceView mRenderSurfaceView;
+    protected GLSurfaceView mGLSurfaceView;
     protected MyRenderer mRenderer;
     private boolean isRenderSurfaceViewShowing = true;
 
@@ -71,15 +73,46 @@ public class VideoLivingView extends FrameLayout {
     private void initView(Context context) {
         LayoutInflater mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mInflater.inflate(R.layout.layout_camera_view, this, true);
-        mRenderSurfaceView = (RenderSurfaceView) findViewById(R.id.render_surface_view);
-        mRenderSurfaceView.setZOrderMediaOverlay(false);
-        mRenderer = mRenderSurfaceView.getRenderer();
+        mGLSurfaceView = (GLSurfaceView)findViewById(R.id.surface_view);
+        mGLSurfaceView.setZOrderMediaOverlay(false);
+        initRenderer();
 
-        CameraVideoController videoController = new CameraVideoController(mRenderer);
-        NormalAudioController audioController = new NormalAudioController();
-        mStreamController = new StreamController(videoController, audioController);
+        ControllerCameraVideo videoController = new ControllerCameraVideo(mRenderer);
+        ControllerAudio audioController = new ControllerAudio();
+        mControllerStream = new ControllerStream(videoController, audioController);
         mRenderer.setCameraOpenListener(mCameraOpenListener);
     }
+
+    @SuppressWarnings("deprecation")
+    private void initRenderer() {
+        mRenderer = new MyRenderer(mGLSurfaceView);
+        mGLSurfaceView.setEGLContextClientVersion(2);
+        mGLSurfaceView.setRenderer(mRenderer);
+        mGLSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+        SurfaceHolder surfaceHolder = mGLSurfaceView.getHolder();
+        surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        surfaceHolder.addCallback(mSurfaceHolderCallback);
+    }
+
+    private SurfaceHolder.Callback mSurfaceHolderCallback = new SurfaceHolder.Callback() {
+        @Override
+        public void surfaceDestroyed(SurfaceHolder holder) {
+            Lg.d("SurfaceView destroy");
+            Cameras.instance().stopPreview();
+            Cameras.instance().releaseCamera();
+        }
+
+        @TargetApi(Build.VERSION_CODES.GINGERBREAD)
+        @Override
+        public void surfaceCreated(SurfaceHolder holder) {
+            Lg.d("SurfaceView created");
+        }
+
+        @Override
+        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            Lg.d("SurfaceView width:" + width + " height:" + height);
+        }
+    };
 
     @Override
     public void onDetachedFromWindow(){
@@ -110,14 +143,14 @@ public class VideoLivingView extends FrameLayout {
     private void addRenderSurfaceView() {
         if (!isRenderSurfaceViewShowing) {
             LayoutParams layoutParams = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            addView(mRenderSurfaceView, 0, layoutParams);
+            addView(mGLSurfaceView, 0, layoutParams);
             isRenderSurfaceViewShowing = true;
         }
     }
 
     private void removeRenderSurfaceView() {
         if (isRenderSurfaceViewShowing) {
-            removeView(mRenderSurfaceView);
+            removeView(mGLSurfaceView);
             isRenderSurfaceViewShowing = false;
         }
     }
@@ -154,15 +187,15 @@ public class VideoLivingView extends FrameLayout {
     }
 
     public void setPacker(Packer packer) {
-        mStreamController.setPacker(packer);
+        mControllerStream.setPacker(packer);
     }
 
     public void setSender(Sender sender) {
-        mStreamController.setSender(sender);
+        mControllerStream.setSender(sender);
     }
 
     public void setVideoConfiguration() {
-        mStreamController.setVideoConfiguration();
+        mControllerStream.setVideoConfiguration();
     }
 
     public void setCameraConfiguration() {
@@ -239,7 +272,7 @@ public class VideoLivingView extends FrameLayout {
                     }
                     chooseVoiceMode();
                     screenOn();
-                    mStreamController.start();
+                    mControllerStream.start();
                 } else {
                     if (mLivingStartListener != null) {
                         mHandler.post(new Runnable() {
@@ -267,7 +300,7 @@ public class VideoLivingView extends FrameLayout {
 
     public void stop() {
         screenOff();
-        mStreamController.stop();
+        mControllerStream.stop();
         setAudioNormal();
     }
 
@@ -288,15 +321,15 @@ public class VideoLivingView extends FrameLayout {
     }
 
     public void pause() {
-        mStreamController.pause();
+        mControllerStream.pause();
     }
 
     public void resume() {
-        mStreamController.resume();
+        mControllerStream.resume();
     }
 
     public boolean setVideoBps(int bps) {
-        return mStreamController.setVideoBps(bps);
+        return mControllerStream.setVideoBps(bps);
     }
 
     private boolean isCameraOpen() {

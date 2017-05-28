@@ -12,23 +12,13 @@ import org.yeshen.video.librtmp.net.sender.Sender;
 
 import java.nio.ByteBuffer;
 
-/**
- * @Title: StreamController
- * @Package com.laifeng.sopcastsdk.controller
- * @Description:
- * @Author Jim
- * @Date 16/9/14
- * @Time 上午11:44
- * @Version
- */
-
-public class StreamController implements OnAudioEncodeListener, OnVideoEncodeListener, Packer.OnPacketListener{
+public class ControllerStream implements OnAudioEncodeListener, OnVideoEncodeListener, Packer.OnPacketListener{
     private Packer mPacker;
     private Sender mSender;
     private IVideoController mVideoController;
     private IAudioController mAudioController;
 
-    public StreamController(IVideoController videoProcessor, IAudioController audioProcessor) {
+    public ControllerStream(IVideoController videoProcessor, IAudioController audioProcessor) {
         mAudioController = audioProcessor;
         mVideoController = videoProcessor;
     }
@@ -58,8 +48,8 @@ public class StreamController implements OnAudioEncodeListener, OnVideoEncodeLis
                 }
                 mPacker.start();
                 mSender.start();
-                mVideoController.setVideoEncoderListener(StreamController.this);
-                mAudioController.setAudioEncodeListener(StreamController.this);
+                mVideoController.setVideoEncoderListener(ControllerStream.this);
+                mAudioController.setAudioEncodeListener(ControllerStream.this);
                 mAudioController.start();
                 mVideoController.start();
             }
@@ -102,14 +92,6 @@ public class StreamController implements OnAudioEncodeListener, OnVideoEncodeLis
                 mVideoController.resume();
             }
         });
-    }
-
-    void mute(boolean mute) {
-        mAudioController.mute(mute);
-    }
-
-    int getSessionId() {
-        return mAudioController.getSessionId();
     }
 
     public boolean setVideoBps(int bps) {

@@ -6,22 +6,12 @@ import org.yeshen.video.librtmp.afix.interfaces.IVideoController;
 import org.yeshen.video.librtmp.afix.interfaces.OnVideoEncodeListener;
 import org.yeshen.video.librtmp.tools.Lg;
 
-/**
- * @Title: CameraVideoController
- * @Package com.laifeng.sopcastsdk.controller.video
- * @Description:
- * @Author Jim
- * @Date 16/9/14
- * @Time 下午12:54
- * @Version
- */
-
-public class CameraVideoController implements IVideoController {
+public class ControllerCameraVideo implements IVideoController {
     private MyRecorder mRecorder;
     private MyRenderer mRenderer;
     private OnVideoEncodeListener mListener;
 
-    public CameraVideoController(MyRenderer renderer) {
+    public ControllerCameraVideo(MyRenderer renderer) {
         mRenderer = renderer;
         mRenderer.setVideoConfiguration();
     }

@@ -355,6 +355,28 @@ public class AndroidUntil {
         return m;
     }
 
+    public static int createProgram(){
+        final String vertexShader =
+                //
+                "attribute vec4 position;\n" +
+                        "attribute vec4 inputTextureCoordinate;\n" +
+                        "uniform   mat4 uPosMtx;\n" +
+                        "varying   vec2 textureCoordinate;\n" +
+                        "void main() {\n" +
+                        "  gl_Position = uPosMtx * position;\n" +
+                        "  textureCoordinate   = inputTextureCoordinate.xy;\n" +
+                        "}\n";
+        final String fragmentShader =
+                //
+                "precision mediump float;\n" +
+                        "uniform sampler2D uSampler;\n" +
+                        "varying vec2  textureCoordinate;\n" +
+                        "void main() {\n" +
+                        "  gl_FragColor = texture2D(uSampler, textureCoordinate);\n" +
+                        "}\n";
+        return createProgram(vertexShader, fragmentShader);
+    }
+
     public static int createProgram(String vertexSource, String fragmentSource) {
         int vs = loadShader(GLES20.GL_VERTEX_SHADER,   vertexSource);
         int fs = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource);

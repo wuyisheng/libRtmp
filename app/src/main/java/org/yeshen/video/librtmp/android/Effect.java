@@ -88,7 +88,7 @@ public abstract class Effect {
         if(Cameras.instance().getState() != Cameras.State.PREVIEW) {
             return;
         }
-        Cameras.CameraMessage cameraData = Cameras.instance().getCameraData();
+        Cameras.CameraMessage cameraData = Cameras.instance().getCurrentCamera();
         int width = cameraData.cameraWidth;
         int height = cameraData.cameraHeight;
         if(Cameras.instance().isLandscape()) {
