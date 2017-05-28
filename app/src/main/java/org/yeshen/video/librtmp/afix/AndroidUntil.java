@@ -17,14 +17,12 @@ import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.os.Build;
 
-import org.yeshen.video.librtmp.android.AudioConfiguration;
-import org.yeshen.video.librtmp.android.CameraConfiguration;
 import org.yeshen.video.librtmp.android.CameraData;
-import org.yeshen.video.librtmp.android.VideoConfiguration;
 import org.yeshen.video.librtmp.exception.CameraDisabledException;
 import org.yeshen.video.librtmp.exception.CameraNotSupportException;
 import org.yeshen.video.librtmp.exception.NoCameraException;
 import org.yeshen.video.librtmp.tools.Lg;
+import org.yeshen.video.librtmp.tools.Options;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,7 +37,7 @@ import java.util.List;
  * Copyright (c) 2017 yeshen.org. - All Rights Reserved
  *********************************************************************/
 
-
+@SuppressWarnings("deprecation")
 public class AndroidUntil {
 
     public static final int WATERMARK_ORIENTATION_TOP_LEFT = 1;
@@ -95,14 +93,14 @@ public class AndroidUntil {
         return cameraDatas;
     }
 
-    public static void initCameraParams(Camera camera, CameraData cameraData, boolean isTouchMode, CameraConfiguration configuration)
+    public static void initCameraParams(Camera camera, CameraData cameraData, boolean isTouchMode)
             throws CameraNotSupportException {
-        boolean isLandscape = (configuration.orientation != CameraConfiguration.Orientation.PORTRAIT);
-        int cameraWidth = Math.max(configuration.height, configuration.width);
-        int cameraHeight = Math.min(configuration.height, configuration.width);
+        boolean isLandscape = (Options.getInstance().camera.orientation != Options.Orientation.PORTRAIT);
+        int cameraWidth = Math.max(Options.getInstance().camera.height, Options.getInstance().camera.width);
+        int cameraHeight = Math.min(Options.getInstance().camera.height, Options.getInstance().camera.width);
         Camera.Parameters parameters = camera.getParameters();
         setPreviewFormat(camera, parameters);
-        setPreviewFps(camera, configuration.fps, parameters);
+        setPreviewFps(camera, Options.getInstance().camera.fps, parameters);
         setPreviewSize(camera, cameraData, cameraWidth, cameraHeight, parameters);
         cameraData.hasLight = supportFlash(camera);
         setOrientation(cameraData, isLandscape, camera);
@@ -432,20 +430,23 @@ public class AndroidUntil {
     }
 
     @TargetApi(18)
-    public static MediaCodec getAudioMediaCodec(AudioConfiguration configuration){
-        MediaFormat format = MediaFormat.createAudioFormat(configuration.mime, configuration.frequency, configuration.channelCount);
-        if(configuration.mime.equals(AudioConfiguration.DEFAULT_MIME)) {
-            format.setInteger(MediaFormat.KEY_AAC_PROFILE, configuration.aacProfile);
+    public static MediaCodec getAudioMediaCodec(){
+        MediaFormat format = MediaFormat.createAudioFormat(
+                Options.getInstance().audio.mime,
+                Options.getInstance().audio.frequency,
+                Options.getInstance().audio.channelCount);
+        if(Options.getInstance().audio.mime.equals(Options.DEFAULT_MIME)) {
+            format.setInteger(MediaFormat.KEY_AAC_PROFILE, Options.getInstance().audio.aacProfile);
         }
-        format.setInteger(MediaFormat.KEY_BIT_RATE, configuration.maxBps * 1024);
-        format.setInteger(MediaFormat.KEY_SAMPLE_RATE, configuration.frequency);
-        int maxInputSize = getRecordBufferSize(configuration);
+        format.setInteger(MediaFormat.KEY_BIT_RATE, Options.getInstance().audio.maxBps * 1024);
+        format.setInteger(MediaFormat.KEY_SAMPLE_RATE, Options.getInstance().audio.frequency);
+        int maxInputSize = getRecordBufferSize();
         format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, maxInputSize);
-        format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, configuration.channelCount);
+        format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, Options.getInstance().audio.channelCount);
 
         MediaCodec mediaCodec = null;
         try {
-            mediaCodec = MediaCodec.createEncoderByType(configuration.mime);
+            mediaCodec = MediaCodec.createEncoderByType(Options.getInstance().audio.mime);
             mediaCodec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         } catch (Exception e) {
             e.printStackTrace();
@@ -458,27 +459,28 @@ public class AndroidUntil {
         return mediaCodec;
     }
 
-    public static MediaCodec getVideoMediaCodec(VideoConfiguration videoConfiguration) {
-        int videoWidth = getVideoSize(videoConfiguration.width);
-        int videoHeight = getVideoSize(videoConfiguration.height);
-        MediaFormat format = MediaFormat.createVideoFormat(videoConfiguration.mime, videoWidth, videoHeight);
+    @TargetApi(21)
+    public static MediaCodec getVideoMediaCodec() {
+        int videoWidth = getVideoSize(Options.getInstance().video.width);
+        int videoHeight = getVideoSize(Options.getInstance().video.height);
+        MediaFormat format = MediaFormat.createVideoFormat(Options.getInstance().video.mime, videoWidth, videoHeight);
         format.setInteger(MediaFormat.KEY_COLOR_FORMAT,
                 MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-        format.setInteger(MediaFormat.KEY_BIT_RATE, videoConfiguration.maxBps* 1024);
-        int fps = videoConfiguration.fps;
+        format.setInteger(MediaFormat.KEY_BIT_RATE, Options.getInstance().video.maxBps* 1024);
+        int fps = Options.getInstance().video.fps;
         //设置摄像头预览帧率
 //        if(BlackListHelper.deviceInFpsBlacklisted()) {
 //            SopCastLog.d(SopCastConstant.TAG, "Device in fps setting black list, so set mediacodec fps 15");
 //            fps = 15;
 //        }
         format.setInteger(MediaFormat.KEY_FRAME_RATE, fps);
-        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, videoConfiguration.ifi);
+        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, Options.getInstance().video.ifi);
         format.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR);
         format.setInteger(MediaFormat.KEY_COMPLEXITY, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR);
         MediaCodec mediaCodec = null;
 
         try {
-            mediaCodec = MediaCodec.createEncoderByType(videoConfiguration.mime);
+            mediaCodec = MediaCodec.createEncoderByType(Options.getInstance().video.mime);
             mediaCodec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         }catch (Exception e) {
             e.printStackTrace();
@@ -519,11 +521,11 @@ public class AndroidUntil {
         return out.toString();
     }
 
-    public static boolean checkMicSupport(AudioConfiguration audioConfiguration) {
+    public static boolean checkMicSupport() {
         boolean result;
-        int recordBufferSize = getRecordBufferSize(audioConfiguration);
+        int recordBufferSize = getRecordBufferSize();
         byte[] mRecordBuffer = new byte[recordBufferSize];
-        AudioRecord audioRecord = getAudioRecord(audioConfiguration);
+        AudioRecord audioRecord = getAudioRecord();
         try {
             audioRecord.startRecording();
         } catch (Exception e) {
@@ -539,32 +541,30 @@ public class AndroidUntil {
         return result;
     }
 
-    public static int getRecordBufferSize(AudioConfiguration audioConfiguration) {
-        int frequency = audioConfiguration.frequency;
-        int audioEncoding = audioConfiguration.encoding;
+    public static int getRecordBufferSize() {
+        int frequency = Options.getInstance().audio.frequency;
+        int audioEncoding = Options.getInstance().audio.encoding;
         int channelConfiguration = AudioFormat.CHANNEL_CONFIGURATION_MONO;
-        if(audioConfiguration.channelCount == 2) {
+        if(Options.getInstance().audio.channelCount == 2) {
             channelConfiguration = AudioFormat.CHANNEL_CONFIGURATION_STEREO;
         }
-        int size = AudioRecord.getMinBufferSize(frequency, channelConfiguration, audioEncoding);
-        return size;
+        return AudioRecord.getMinBufferSize(frequency, channelConfiguration, audioEncoding);
     }
 
     @TargetApi(18)
-    public static AudioRecord getAudioRecord(AudioConfiguration audioConfiguration) {
-        int frequency = audioConfiguration.frequency;
-        int audioEncoding = audioConfiguration.encoding;
+    public static AudioRecord getAudioRecord() {
+        int frequency = Options.getInstance().audio.frequency;
+        int audioEncoding = Options.getInstance().audio.encoding;
         int channelConfiguration = AudioFormat.CHANNEL_CONFIGURATION_MONO;
-        if(audioConfiguration.channelCount == 2) {
+        if(Options.getInstance().audio.channelCount == 2) {
             channelConfiguration = AudioFormat.CHANNEL_CONFIGURATION_STEREO;
         }
         int audioSource = MediaRecorder.AudioSource.MIC;
-        if(audioConfiguration.aec) {
+        if(Options.getInstance().audio.aec) {
             audioSource = MediaRecorder.AudioSource.VOICE_COMMUNICATION;
         }
-        AudioRecord audioRecord = new AudioRecord(audioSource, frequency,
-                channelConfiguration, audioEncoding, getRecordBufferSize(audioConfiguration));
-        return audioRecord;
+        return new AudioRecord(audioSource, frequency,
+                channelConfiguration, audioEncoding, getRecordBufferSize());
     }
 
 }

@@ -4,11 +4,11 @@ import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 
-import org.yeshen.video.librtmp.android.CameraConfiguration;
 import org.yeshen.video.librtmp.android.CameraData;
 import org.yeshen.video.librtmp.exception.CameraHardwareException;
 import org.yeshen.video.librtmp.exception.CameraNotSupportException;
 import org.yeshen.video.librtmp.tools.Lg;
+import org.yeshen.video.librtmp.tools.Options;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,7 +37,7 @@ public abstract class Cameras {
 
     public abstract State getState();
 
-    public abstract void setConfiguration(CameraConfiguration configuration);
+    public abstract void setConfiguration();
 
     public abstract void startPreview();
 
@@ -73,7 +73,6 @@ public abstract class Cameras {
         private SurfaceTexture mTexture;
         private boolean isTouchMode = false;
         private boolean isOpenBackFirst = false;
-        private CameraConfiguration mConfiguration = CameraConfiguration.createDefault();
 
         public CameraImpl() {
             mState = State.INIT;
@@ -86,7 +85,7 @@ public abstract class Cameras {
 
         @Override
         public boolean isLandscape() {
-            return (mConfiguration.orientation != CameraConfiguration.Orientation.PORTRAIT);
+            return (Options.getInstance().camera.orientation != Options.Orientation.PORTRAIT);
         }
 
         @SuppressWarnings("deprecation")
@@ -112,7 +111,7 @@ public abstract class Cameras {
                 throw new CameraNotSupportException();
             }
             try {
-                AndroidUntil.initCameraParams(mCameraDevice, cameraData, isTouchMode, mConfiguration);
+                AndroidUntil.initCameraParams(mCameraDevice, cameraData, isTouchMode);
             } catch (Exception e) {
                 e.printStackTrace();
                 mCameraDevice.release();
@@ -142,10 +141,9 @@ public abstract class Cameras {
         }
 
         @Override
-        public void setConfiguration(CameraConfiguration configuration) {
-            isTouchMode = (configuration.focusMode != CameraConfiguration.FocusMode.AUTO);
-            isOpenBackFirst = (configuration.facing != CameraConfiguration.Facing.FRONT);
-            mConfiguration = configuration;
+        public void setConfiguration() {
+            isTouchMode = (Options.getInstance().camera.focusMode != Options.FocusMode.AUTO);
+            isOpenBackFirst = (Options.getInstance().camera.facing != Options.Facing.FRONT);
         }
 
         @Override
@@ -212,7 +210,6 @@ public abstract class Cameras {
             mTexture = null;
             isTouchMode = false;
             isOpenBackFirst = false;
-            mConfiguration = CameraConfiguration.createDefault();
         }
 
         @SuppressWarnings("deprecation")

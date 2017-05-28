@@ -66,15 +66,4 @@ public class RenderSurfaceView extends GLSurfaceView {
             Lg.d("SurfaceView width:" + width + " height:" + height);
         }
     };
-
-    public void setEffect(final Effect effect) {
-        this.queueEvent(new Runnable() {
-            @Override
-            public void run() {
-                if (null != mRenderer) {
-                    mRenderer.setEffect(effect);
-                }
-            }
-        });
-    }
 }

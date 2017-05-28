@@ -19,17 +19,15 @@ import org.yeshen.video.librtmp.tools.Lg;
 public class CameraVideoController implements IVideoController {
     private MyRecorder mRecorder;
     private MyRenderer mRenderer;
-    private VideoConfiguration mVideoConfiguration = VideoConfiguration.createDefault();
     private OnVideoEncodeListener mListener;
 
     public CameraVideoController(MyRenderer renderer) {
         mRenderer = renderer;
-        mRenderer.setVideoConfiguration(mVideoConfiguration);
+        mRenderer.setVideoConfiguration();
     }
 
-    public void setVideoConfiguration(VideoConfiguration configuration) {
-        mVideoConfiguration = configuration;
-        mRenderer.setVideoConfiguration(mVideoConfiguration);
+    public void setVideoConfiguration() {
+        mRenderer.setVideoConfiguration();
     }
 
     public void setVideoEncoderListener(OnVideoEncodeListener listener) {
@@ -41,7 +39,7 @@ public class CameraVideoController implements IVideoController {
             return;
         }
         Lg.d( "Start video recording");
-        mRecorder = new MyRecorder(mVideoConfiguration);
+        mRecorder = new MyRecorder();
         mRecorder.setVideoEncodeListener(mListener);
         mRecorder.prepareEncoder();
         mRenderer.setRecorder(mRecorder);

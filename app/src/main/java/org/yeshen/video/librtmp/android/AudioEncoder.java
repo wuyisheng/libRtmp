@@ -21,19 +21,17 @@ import java.nio.ByteBuffer;
 public class AudioEncoder {
     private MediaCodec mMediaCodec;
     private OnAudioEncodeListener mListener;
-    private AudioConfiguration mAudioConfiguration;
     MediaCodec.BufferInfo mBufferInfo = new MediaCodec.BufferInfo();
 
     public void setOnAudioEncodeListener(OnAudioEncodeListener listener) {
         mListener = listener;
     }
 
-    public AudioEncoder(AudioConfiguration audioConfiguration) {
-        mAudioConfiguration = audioConfiguration;
+    public AudioEncoder() {
     }
 
     void prepareEncoder() {
-        mMediaCodec = AndroidUntil.getAudioMediaCodec(mAudioConfiguration);
+        mMediaCodec = AndroidUntil.getAudioMediaCodec();
         mMediaCodec.start();
     }
 

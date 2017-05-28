@@ -1,7 +1,5 @@
 package org.yeshen.video.librtmp.net.sender.rtmp;
 
-import org.yeshen.video.librtmp.android.AudioConfiguration;
-import org.yeshen.video.librtmp.tools.WeakHandler;
 import org.yeshen.video.librtmp.net.packer.rtmp.RtmpPacker;
 import org.yeshen.video.librtmp.net.sender.Sender;
 import org.yeshen.video.librtmp.net.sender.rtmp.io.RtmpConnectListener;
@@ -10,6 +8,7 @@ import org.yeshen.video.librtmp.net.sender.sendqueue.ISendQueue;
 import org.yeshen.video.librtmp.net.sender.sendqueue.NormalSendQueue;
 import org.yeshen.video.librtmp.net.sender.sendqueue.SendQueueListener;
 import org.yeshen.video.librtmp.tools.Options;
+import org.yeshen.video.librtmp.tools.WeakHandler;
 
 /**
  * @Title: RtmpSender
@@ -24,10 +23,10 @@ public class RtmpSender implements Sender, SendQueueListener {
 
     public static RtmpSender getRtmpSender() {
         RtmpSender sender = new RtmpSender();
-        String address = Options.getInstance().toString();
+        String adress = Options.getInstance().toString();
         sender.setVideoParams(640, 360);
-        sender.setAudioParams(AudioConfiguration.DEFAULT_FREQUENCY, 16, false);
-        sender.setAddress(address);
+        sender.setAudioParams(Options.DEFAULT_FREQUENCY, 16, false);
+        sender.setAddress(adress);
         return sender;
     }
 

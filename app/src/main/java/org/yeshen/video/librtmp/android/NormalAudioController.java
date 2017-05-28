@@ -21,14 +21,8 @@ public class NormalAudioController implements IAudioController {
     private AudioRecord mAudioRecord;
     private AudioProcessor mAudioProcessor;
     private boolean mMute;
-    private AudioConfiguration mAudioConfiguration;
 
     public NormalAudioController() {
-        mAudioConfiguration = AudioConfiguration.createDefault();
-    }
-
-    public void setAudioConfiguration(AudioConfiguration audioConfiguration) {
-        mAudioConfiguration = audioConfiguration;
     }
 
     public void setAudioEncodeListener(OnAudioEncodeListener listener) {
@@ -36,13 +30,13 @@ public class NormalAudioController implements IAudioController {
     }
 
     public void start() {
-        mAudioRecord = AndroidUntil.getAudioRecord(mAudioConfiguration);
+        mAudioRecord = AndroidUntil.getAudioRecord();
         try {
             mAudioRecord.startRecording();
         } catch (Exception e) {
             e.printStackTrace();
         }
-        mAudioProcessor = new AudioProcessor(mAudioRecord, mAudioConfiguration);
+        mAudioProcessor = new AudioProcessor(mAudioRecord);
         mAudioProcessor.setAudioHEncodeListener(mListener);
         mAudioProcessor.start();
         mAudioProcessor.setMute(mMute);

@@ -33,8 +33,8 @@ public class StreamController implements OnAudioEncodeListener, OnVideoEncodeLis
         mVideoController = videoProcessor;
     }
 
-    public void setVideoConfiguration(VideoConfiguration videoConfiguration) {
-        mVideoController.setVideoConfiguration(videoConfiguration);
+    public void setVideoConfiguration() {
+        mVideoController.setVideoConfiguration();
     }
 
     public void setPacker(Packer packer) {

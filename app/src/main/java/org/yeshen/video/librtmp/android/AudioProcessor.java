@@ -26,11 +26,11 @@ public class AudioProcessor extends Thread {
     private byte[] mRecordBuffer;
     private int mRecordBufferSize;
 
-    public AudioProcessor(AudioRecord audioRecord, AudioConfiguration audioConfiguration) {
-        mRecordBufferSize = AndroidUntil.getRecordBufferSize(audioConfiguration);
+    public AudioProcessor(AudioRecord audioRecord) {
+        mRecordBufferSize = AndroidUntil.getRecordBufferSize();
         mRecordBuffer =  new byte[mRecordBufferSize];
         mAudioRecord = audioRecord;
-        mAudioEncoder = new AudioEncoder(audioConfiguration);
+        mAudioEncoder = new AudioEncoder();
         mAudioEncoder.prepareEncoder();
     }
 

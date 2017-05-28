@@ -9,7 +9,7 @@ import android.opengl.GLES20;
 import android.opengl.Matrix;
 
 import org.yeshen.video.librtmp.afix.AndroidUntil;
-import org.yeshen.video.librtmp.tools.Options;
+import org.yeshen.video.librtmp.afix.Cameras;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -35,16 +35,16 @@ public class RenderSrfTex {
     private final float[] mSymmetryMtx = AndroidUntil.createIdentityMtx();
     private final float[] mNormalMtx = AndroidUntil.createIdentityMtx();
 
-    private int mProgram         = -1;
+    private int mProgram = -1;
     private int maPositionHandle = -1;
     private int maTexCoordHandle = -1;
-    private int muSamplerHandle  = -1;
-    private int muPosMtxHandle   = -1;
+    private int muSamplerHandle = -1;
+    private int muPosMtxHandle = -1;
 
-    private EGLDisplay mSavedEglDisplay     = null;
+    private EGLDisplay mSavedEglDisplay = null;
     private EGLSurface mSavedEglDrawSurface = null;
     private EGLSurface mSavedEglReadSurface = null;
-    private EGLContext mSavedEglContext     = null;
+    private EGLContext mSavedEglContext = null;
 
     private int mVideoWidth = 0;
     private int mVideoHeight = 0;
@@ -69,30 +69,31 @@ public class RenderSrfTex {
     }
 
     private void initCameraTexCoordBuffer() {
-        int cameraWidth = Options.getInstance().width;
-        int cameraHeight = Options.getInstance().height;
-//        CameraData cameraData = CameraHolder.instance().getCameraData();
-//        int width = cameraData.cameraWidth;
-//        int height = cameraData.cameraHeight;
-//        if(CameraHolder.instance().isLandscape()) {
-//            cameraWidth = Math.max(width, height);
-//            cameraHeight = Math.min(width, height);
-//        } else {
-//            cameraWidth = Math.min(width, height);
-//            cameraHeight = Math.max(width, height);
-//        }
-        float hRatio = mVideoWidth / ((float)cameraWidth);
-        float vRatio = mVideoHeight / ((float)cameraHeight);
+        int cameraWidth;
+        int cameraHeight;
+        CameraData cameraData = Cameras.instance().getCameraData();
+        int width = cameraData.cameraWidth;
+        int height = cameraData.cameraHeight;
+        if (Cameras.instance().isLandscape()) {
+            cameraWidth = Math.max(width, height);
+            cameraHeight = Math.min(width, height);
+        } else {
+            cameraWidth = Math.min(width, height);
+            cameraHeight = Math.max(width, height);
+        }
+
+        float hRatio = mVideoWidth / ((float) cameraWidth);
+        float vRatio = mVideoHeight / ((float) cameraHeight);
 
         float ratio;
-        if(hRatio > vRatio) {
+        if (hRatio > vRatio) {
             ratio = mVideoHeight / (cameraHeight * hRatio);
             final float vtx[] = {
                     //UV
-                    0f, 0.5f + ratio/2,
-                    0f, 0.5f - ratio/2,
-                    1f, 0.5f + ratio/2,
-                    1f, 0.5f - ratio/2,
+                    0f, 0.5f + ratio / 2,
+                    0f, 0.5f - ratio / 2,
+                    1f, 0.5f + ratio / 2,
+                    1f, 0.5f - ratio / 2,
             };
             ByteBuffer bb = ByteBuffer.allocateDirect(4 * vtx.length);
             bb.order(ByteOrder.nativeOrder());
@@ -100,13 +101,13 @@ public class RenderSrfTex {
             mCameraTexCoordBuffer.put(vtx);
             mCameraTexCoordBuffer.position(0);
         } else {
-            ratio = mVideoWidth/ (cameraWidth * vRatio);
+            ratio = mVideoWidth / (cameraWidth * vRatio);
             final float vtx[] = {
                     //UV
-                    0.5f - ratio/2, 1f,
-                    0.5f - ratio/2, 0f,
-                    0.5f + ratio/2, 1f,
-                    0.5f + ratio/2, 0f,
+                    0.5f - ratio / 2, 1f,
+                    0.5f - ratio / 2, 0f,
+                    0.5f + ratio / 2, 1f,
+                    0.5f + ratio / 2, 0f,
             };
             ByteBuffer bb = ByteBuffer.allocateDirect(4 * vtx.length);
             bb.order(ByteOrder.nativeOrder());
@@ -148,18 +149,7 @@ public class RenderSrfTex {
 
             GLES20.glUniform1i(muSamplerHandle, 0);
 
-            //处理前置摄像头镜像
-//            CameraData cameraData = CameraHolder.instance().getCameraData();
-//            if(cameraData != null) {
-//                int facing = cameraData.cameraFacing;
-//                if(muPosMtxHandle>= 0) {
-//                    if(facing == CameraData.FACING_FRONT) {
-                        GLES20.glUniformMatrix4fv(muPosMtxHandle, 1, false, mSymmetryMtx, 0);
-//                    }else {
-//                        GLES20.glUniformMatrix4fv(muPosMtxHandle, 1, false, mNormalMtx, 0);
-//                    }
-//                }
-//            }
+            GLES20.glUniformMatrix4fv(muPosMtxHandle, 1, false, mNormalMtx, 0);
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mFboTexId);
 
@@ -193,11 +183,11 @@ public class RenderSrfTex {
                         "void main() {\n" +
                         "  gl_FragColor = texture2D(uSampler, textureCoordinate);\n" +
                         "}\n";
-        mProgram         = AndroidUntil.createProgram(vertexShader, fragmentShader);
+        mProgram = AndroidUntil.createProgram(vertexShader, fragmentShader);
         maPositionHandle = GLES20.glGetAttribLocation(mProgram, "position");
         maTexCoordHandle = GLES20.glGetAttribLocation(mProgram, "inputTextureCoordinate");
-        muSamplerHandle  = GLES20.glGetUniformLocation(mProgram, "uSampler");
-        muPosMtxHandle   = GLES20.glGetUniformLocation(mProgram, "uPosMtx");
+        muSamplerHandle = GLES20.glGetUniformLocation(mProgram, "uSampler");
+        muPosMtxHandle = GLES20.glGetUniformLocation(mProgram, "uPosMtx");
 
         Matrix.scaleM(mSymmetryMtx, 0, -1, 1, 1);
 
@@ -209,10 +199,10 @@ public class RenderSrfTex {
     }
 
     private void saveRenderState() {
-        mSavedEglDisplay     = EGL14.eglGetCurrentDisplay();
+        mSavedEglDisplay = EGL14.eglGetCurrentDisplay();
         mSavedEglDrawSurface = EGL14.eglGetCurrentSurface(EGL14.EGL_DRAW);
         mSavedEglReadSurface = EGL14.eglGetCurrentSurface(EGL14.EGL_READ);
-        mSavedEglContext     = EGL14.eglGetCurrentContext();
+        mSavedEglContext = EGL14.eglGetCurrentContext();
     }
 
     private void restoreRenderState() {

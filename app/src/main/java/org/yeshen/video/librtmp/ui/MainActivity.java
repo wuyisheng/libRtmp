@@ -6,15 +6,13 @@ import android.view.View;
 import android.widget.Toast;
 
 import org.yeshen.video.librtmp.R;
+import org.yeshen.video.librtmp.afix.VideoLivingView;
 import org.yeshen.video.librtmp.afix.interfaces.CameraListener;
 import org.yeshen.video.librtmp.afix.interfaces.LivingStartListener;
-import org.yeshen.video.librtmp.android.AudioConfiguration;
-import org.yeshen.video.librtmp.android.CameraConfiguration;
-import org.yeshen.video.librtmp.afix.VideoLivingView;
-import org.yeshen.video.librtmp.android.VideoConfiguration;
 import org.yeshen.video.librtmp.net.packer.rtmp.RtmpPacker;
 import org.yeshen.video.librtmp.net.sender.rtmp.RtmpSender;
 import org.yeshen.video.librtmp.tools.Lg;
+import org.yeshen.video.librtmp.tools.Options;
 
 /*********************************************************************
  * Created by yeshen on 2017/05/17.
@@ -25,7 +23,6 @@ public class MainActivity extends AppCompatActivity {
 
     private VideoLivingView mLFLiveView;
     private RtmpSender mRtmpSender;
-    private VideoConfiguration mVideoConfiguration;
     private int mCurrentBps;
 
     @Override
@@ -48,16 +45,13 @@ public class MainActivity extends AppCompatActivity {
 
         mLFLiveView = (VideoLivingView) findViewById(R.id.player);
         mLFLiveView.init();
-        CameraConfiguration.Builder cameraBuilder = new CameraConfiguration.Builder();
-        cameraBuilder.setOrientation(CameraConfiguration.Orientation.PORTRAIT)
-                .setFacing(CameraConfiguration.Facing.BACK);
-        CameraConfiguration cameraConfiguration = cameraBuilder.build();
-        mLFLiveView.setCameraConfiguration(cameraConfiguration);
 
-        VideoConfiguration.Builder videoBuilder = new VideoConfiguration.Builder();
-        videoBuilder.setSize(640, 360);
-        mVideoConfiguration = videoBuilder.build();
-        mLFLiveView.setVideoConfiguration(mVideoConfiguration);
+        Options.getInstance().setOrientation(Options.Orientation.PORTRAIT);
+        Options.getInstance().setFacing(Options.Facing.BACK);
+        mLFLiveView.setCameraConfiguration();
+
+        Options.getInstance().setSize(640, 360);
+        mLFLiveView.setVideoConfiguration();
 
         //设置预览监听
         mLFLiveView.setCameraOpenListener(new CameraListener() {
@@ -79,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
 
         //初始化flv打包器
         RtmpPacker packer = new RtmpPacker();
-        packer.initAudioParams(AudioConfiguration.DEFAULT_FREQUENCY, 16, false);
+        packer.initAudioParams(Options.DEFAULT_FREQUENCY, 16, false);
         mLFLiveView.setPacker(packer);
         //设置发送器
         mRtmpSender = RtmpSender.getRtmpSender();
@@ -106,7 +100,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void push() {
-
         Toast.makeText(MainActivity.this, "start connecting", Toast.LENGTH_SHORT).show();
         mRtmpSender.connect();
     }
@@ -138,7 +131,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onConnected() {
             mLFLiveView.start();
-            mCurrentBps = mVideoConfiguration.maxBps;
+            mCurrentBps = Options.getInstance().video.maxBps;
         }
 
         @Override
@@ -154,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onNetGood() {
-            if (mCurrentBps + 50 <= mVideoConfiguration.maxBps){
+            if (mCurrentBps + 50 <= Options.getInstance().video.maxBps){
                 Lg.d( "BPS_CHANGE good up 50");
                 int bps = mCurrentBps + 50;
                 if(mLFLiveView != null) {
@@ -171,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onNetBad() {
-            if (mCurrentBps - 100 >= mVideoConfiguration.minBps){
+            if (mCurrentBps - 100 >= Options.getInstance().video.minBps){
                 Lg.d( "BPS_CHANGE bad down 100");
                 int bps = mCurrentBps - 100;
                 if(mLFLiveView != null) {

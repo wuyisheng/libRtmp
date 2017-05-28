@@ -14,17 +14,15 @@ import android.widget.FrameLayout;
 import org.yeshen.video.librtmp.R;
 import org.yeshen.video.librtmp.afix.interfaces.CameraListener;
 import org.yeshen.video.librtmp.afix.interfaces.LivingStartListener;
-import org.yeshen.video.librtmp.android.AudioConfiguration;
-import org.yeshen.video.librtmp.android.CameraConfiguration;
 import org.yeshen.video.librtmp.android.CameraVideoController;
 import org.yeshen.video.librtmp.android.MyRenderer;
 import org.yeshen.video.librtmp.android.NormalAudioController;
 import org.yeshen.video.librtmp.android.RenderSurfaceView;
 import org.yeshen.video.librtmp.android.StreamController;
-import org.yeshen.video.librtmp.android.VideoConfiguration;
 import org.yeshen.video.librtmp.net.packer.Packer;
 import org.yeshen.video.librtmp.net.sender.Sender;
 import org.yeshen.video.librtmp.tools.Lg;
+import org.yeshen.video.librtmp.tools.Options;
 import org.yeshen.video.librtmp.tools.WeakHandler;
 
 /*********************************************************************
@@ -47,8 +45,6 @@ public class VideoLivingView extends FrameLayout {
     private static final String TAG = VideoLivingView.class.getSimpleName();
     private StreamController mStreamController;
     private PowerManager.WakeLock mWakeLock;
-    private VideoConfiguration mVideoConfiguration = VideoConfiguration.createDefault();
-    private AudioConfiguration mAudioConfiguration = AudioConfiguration.createDefault();
     private CameraListener mOutCameraOpenListener;
     private LivingStartListener mLivingStartListener;
     private WeakHandler mHandler = new WeakHandler();
@@ -165,13 +161,12 @@ public class VideoLivingView extends FrameLayout {
         mStreamController.setSender(sender);
     }
 
-    public void setVideoConfiguration(VideoConfiguration videoConfiguration) {
-        mVideoConfiguration = videoConfiguration;
-        mStreamController.setVideoConfiguration(videoConfiguration);
+    public void setVideoConfiguration() {
+        mStreamController.setVideoConfiguration();
     }
 
-    public void setCameraConfiguration(CameraConfiguration cameraConfiguration) {
-        Cameras.instance().setConfiguration(cameraConfiguration);
+    public void setCameraConfiguration() {
+        Cameras.instance().setConfiguration();
     }
 
     private int check() {
@@ -187,27 +182,27 @@ public class VideoLivingView extends FrameLayout {
             Lg.d("The camera have not open");
             return CAMERA_ERROR;
         }
-        MediaCodecInfo videoMediaCodecInfo = AndroidUntil.selectCodec(mVideoConfiguration.mime);
+        MediaCodecInfo videoMediaCodecInfo = AndroidUntil.selectCodec(Options.getInstance().video.mime);
         if (videoMediaCodecInfo == null) {
             Lg.d("Video type error");
             return VIDEO_TYPE_ERROR;
         }
-        MediaCodecInfo audioMediaCodecInfo = AndroidUntil.selectCodec(mAudioConfiguration.mime);
+        MediaCodecInfo audioMediaCodecInfo = AndroidUntil.selectCodec(Options.getInstance().audio.mime);
         if (audioMediaCodecInfo == null) {
             Lg.d("Audio type error");
             return AUDIO_TYPE_ERROR;
         }
-        MediaCodec videoMediaCodec = AndroidUntil.getVideoMediaCodec(mVideoConfiguration);
+        MediaCodec videoMediaCodec = AndroidUntil.getVideoMediaCodec();
         if (videoMediaCodec == null) {
             Lg.d("Video mediacodec configuration error");
             return VIDEO_CONFIGURATION_ERROR;
         }
-        MediaCodec audioMediaCodec = AndroidUntil.getAudioMediaCodec(mAudioConfiguration);
+        MediaCodec audioMediaCodec = AndroidUntil.getAudioMediaCodec();
         if (audioMediaCodec == null) {
             Lg.d("Audio mediacodec configuration error");
             return AUDIO_CONFIGURATION_ERROR;
         }
-        if (!AndroidUntil.checkMicSupport(mAudioConfiguration)) {
+        if (!AndroidUntil.checkMicSupport()) {
             Lg.d("Can not record the audio");
             return AUDIO_ERROR;
         }
@@ -215,10 +210,10 @@ public class VideoLivingView extends FrameLayout {
     }
 
     private boolean checkAec() {
-        if (mAudioConfiguration.aec) {
-            if (mAudioConfiguration.frequency == 8000 ||
-                    mAudioConfiguration.frequency == 16000) {
-                if (mAudioConfiguration.channelCount == 1) {
+        if (Options.getInstance().audio.aec) {
+            if (Options.getInstance().audio.frequency == 8000 ||
+                    Options.getInstance().audio.frequency == 16000) {
+                if (Options.getInstance().audio.channelCount == 1) {
                     return true;
                 }
             }
@@ -261,7 +256,7 @@ public class VideoLivingView extends FrameLayout {
 
     private void chooseVoiceMode() {
         AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
-        if (mAudioConfiguration.aec) {
+        if (Options.getInstance().audio.aec) {
             audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
             audioManager.setSpeakerphoneOn(true);
         } else {

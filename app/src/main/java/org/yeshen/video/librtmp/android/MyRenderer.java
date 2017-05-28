@@ -56,10 +56,9 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         this.mCameraOpenListener = cameraOpenListener;
     }
 
-    public void setVideoConfiguration(VideoConfiguration videoConfiguration) {
-        VideoConfiguration mVideoConfiguration = videoConfiguration;
-        mVideoWidth = AndroidUntil.getVideoSize(mVideoConfiguration.width);
-        mVideoHeight = AndroidUntil.getVideoSize(mVideoConfiguration.height);
+    public void setVideoConfiguration() {
+        mVideoWidth = AndroidUntil.getVideoSize(Options.getInstance().video.width);
+        mVideoHeight = AndroidUntil.getVideoSize(Options.getInstance().video.height);
         Options.getInstance().width = mVideoWidth;
         Options.getInstance().height = mVideoHeight;
     }
@@ -95,7 +94,7 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             if (mRenderScreen == null) {
                 initScreenTexture();
             }
-            mRenderScreen.setSreenSize(width, height);
+            mRenderScreen.setScreenSize(width, height);
             Options.getInstance().width = mVideoWidth;
             Options.getInstance().height = mVideoHeight;
         }

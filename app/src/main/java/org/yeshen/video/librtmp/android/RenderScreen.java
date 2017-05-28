@@ -40,7 +40,7 @@ public class RenderScreen {
         initGL();
     }
 
-    public void setSreenSize(int width, int height) {
+    public void setScreenSize(int width, int height) {
         mScreenW = width;
         mScreenH = height;
 

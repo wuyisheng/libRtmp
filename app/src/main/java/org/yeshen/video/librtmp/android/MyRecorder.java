@@ -20,15 +20,12 @@ public class MyRecorder {
     private OnVideoEncodeListener mListener;
     private boolean mPause;
     private MediaCodec.BufferInfo mBufferInfo;
-    private VideoConfiguration mConfiguration;
     private HandlerThread mHandlerThread;
     private Handler mEncoderHandler;
     private ReentrantLock encodeLock = new ReentrantLock();
     private volatile boolean isStarted;
 
-    public MyRecorder(VideoConfiguration configuration) {
-        mConfiguration = configuration;
-    }
+    public MyRecorder() {}
 
     public void setVideoEncodeListener(OnVideoEncodeListener listener) {
         mListener = listener;
@@ -42,7 +39,7 @@ public class MyRecorder {
         if (mMediaCodec != null || mInputSurface != null) {
             throw new RuntimeException("prepareEncoder called twice?");
         }
-        mMediaCodec = AndroidUntil.getVideoMediaCodec(mConfiguration);
+        mMediaCodec = AndroidUntil.getVideoMediaCodec();
         mHandlerThread = new HandlerThread("SopCastEncode");
         mHandlerThread.start();
         mEncoderHandler = new Handler(mHandlerThread.getLooper());
