@@ -1,15 +1,16 @@
 package org.yeshen.video.librtmp.afix;
 
+import org.yeshen.video.librtmp.core.IRenderer;
 import org.yeshen.video.librtmp.core.IVideo;
 import org.yeshen.video.librtmp.core.delegate.IVideoEncodeDelegate;
 import org.yeshen.video.librtmp.tools.Lg;
 
 public class ControllerCameraVideo implements IVideo {
     private MyRecorder mRecorder;
-    private MyRenderer mRenderer;
+    private IRenderer mRenderer;
     private IVideoEncodeDelegate mListener;
 
-    public ControllerCameraVideo(MyRenderer renderer) {
+    public ControllerCameraVideo(IRenderer renderer) {
         mRenderer = renderer;
         mRenderer.syncVideoConfig();
     }

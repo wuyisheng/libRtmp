@@ -10,6 +10,7 @@ import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
+import android.os.Build;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 
@@ -20,6 +21,7 @@ import org.yeshen.video.librtmp.exception.CameraHardwareException;
 import org.yeshen.video.librtmp.exception.CameraNotSupportException;
 import org.yeshen.video.librtmp.exception.NoCameraException;
 import org.yeshen.video.librtmp.tools.AndroidUntil;
+import org.yeshen.video.librtmp.tools.Lg;
 import org.yeshen.video.librtmp.tools.Options;
 import org.yeshen.video.librtmp.tools.WeakHandler;
 
@@ -86,8 +88,40 @@ class MyRenderer implements IRenderer {
     }
 
     @Override
-    public boolean isCameraOpen() {
-        return isCameraOpen;
+    public int checkStatus() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            Lg.d("Android sdk version error");
+            return SDK_VERSION_ERROR;
+        }
+        if (!checkAec()) {
+            Lg.d("Doesn't support audio aec");
+            return AUDIO_AEC_ERROR;
+        }
+        if (!isCameraOpen) {
+            Lg.d("The camera have not open");
+            return CAMERA_ERROR;
+        }
+        if (AndroidUntil.selectCodec(Options.getInstance().video.mime) == null) {
+            Lg.d("Video type error");
+            return VIDEO_TYPE_ERROR;
+        }
+        if (AndroidUntil.selectCodec(Options.getInstance().audio.mime) == null) {
+            Lg.d("Audio type error");
+            return AUDIO_TYPE_ERROR;
+        }
+        if (AndroidUntil.getVideoMediaCodec() == null) {
+            Lg.d("Video mediacodec configuration error");
+            return VIDEO_CONFIGURATION_ERROR;
+        }
+        if (AndroidUntil.getAudioMediaCodec() == null) {
+            Lg.d("Audio mediacodec configuration error");
+            return AUDIO_CONFIGURATION_ERROR;
+        }
+        if (!AndroidUntil.checkMicSupport()) {
+            Lg.d("Can not record the audio");
+            return AUDIO_ERROR;
+        }
+        return NO_ERROR;
     }
 
     @Override
@@ -127,6 +161,20 @@ class MyRenderer implements IRenderer {
         mEffect.drawFromCameraPreview(mTexMtx);
         if (mRenderScreen != null) mRenderScreen.draw();
         if (mRenderRecord != null) mRenderRecord.draw();
+    }
+
+    private boolean checkAec() {
+        if (Options.getInstance().audio.aec) {
+            if (Options.getInstance().audio.frequency == 8000 ||
+                    Options.getInstance().audio.frequency == 16000) {
+                if (Options.getInstance().audio.channelCount == 1) {
+                    return true;
+                }
+            }
+            return false;
+        } else {
+            return true;
+        }
     }
 
     private void initSurfaceTexture() {

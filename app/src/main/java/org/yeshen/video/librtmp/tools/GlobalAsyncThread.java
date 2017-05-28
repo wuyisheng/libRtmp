@@ -1,4 +1,4 @@
-package org.yeshen.video.librtmp.afix;
+package org.yeshen.video.librtmp.tools;
 
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -10,40 +10,51 @@ import android.os.Process;
  *********************************************************************/
 
 
-public class ControlThread {
+public class GlobalAsyncThread {
 
-    private static ControlThread sInstance = new ControlThread();
+    private static GlobalAsyncThread sInstance = new GlobalAsyncThread();
 
-    public static ControlThread get() {
+    public static GlobalAsyncThread get() {
         return sInstance;
     }
 
-    private ControlThread() {
+    public static void post(final Runnable runnable){
+        sInstance.posts(runnable);
+    }
 
+    public static void start(){
+        sInstance.starts();
+    }
+
+    public static void stop(){
+        sInstance.stops();
+    }
+
+    private GlobalAsyncThread() {
     }
 
     private HandlerThread workThread;
     private Handler workHandler;
 
-    public void post(Runnable runnable) {
+    private void posts(final Runnable runnable) {
         if(workHandler != null){
             workHandler.post(runnable);
         }else{
-            start();
+            starts();
             workHandler.post(runnable);
         }
     }
 
-    public void start(){
-        stop();
+    private void starts(){
+        stops();
         workThread = new HandlerThread(
-                ControlThread.class.getSimpleName(),
+                GlobalAsyncThread.class.getSimpleName(),
                 Process.THREAD_PRIORITY_BACKGROUND);
         workThread.start();
         workHandler  = new Handler(workThread.getLooper());
     }
 
-    public void stop(){
+    private void stops(){
         if(workHandler != null)workHandler.removeCallbacksAndMessages(null);
         if(workThread != null)workThread.quit();
     }

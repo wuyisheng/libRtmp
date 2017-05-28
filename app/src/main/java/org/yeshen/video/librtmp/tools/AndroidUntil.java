@@ -6,6 +6,7 @@ import android.content.Context;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.media.AudioFormat;
+import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
@@ -17,6 +18,7 @@ import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.os.Build;
 
+import org.yeshen.video.librtmp.App;
 import org.yeshen.video.librtmp.afix.Cameras.CameraMessage;
 import org.yeshen.video.librtmp.exception.CameraDisabledException;
 import org.yeshen.video.librtmp.exception.CameraNotSupportException;
@@ -578,6 +580,12 @@ public class AndroidUntil {
         }
         return new AudioRecord(audioSource, frequency,
                 channelConfiguration, audioEncoding, getRecordBufferSize());
+    }
+
+    public static void closeAudioRecord(){
+        AudioManager audioManager = (AudioManager) App.getInstance().getSystemService(Context.AUDIO_SERVICE);
+        audioManager.setMode(AudioManager.MODE_NORMAL);
+        audioManager.setSpeakerphoneOn(false);
     }
 
 }

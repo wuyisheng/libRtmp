@@ -8,6 +8,7 @@ import org.yeshen.video.librtmp.core.delegate.IAudioEncodeDelegate;
 import org.yeshen.video.librtmp.core.delegate.IVideoEncodeDelegate;
 import org.yeshen.video.librtmp.afix.net.packer.Packer;
 import org.yeshen.video.librtmp.afix.net.sender.Sender;
+import org.yeshen.video.librtmp.tools.GlobalAsyncThread;
 
 import java.nio.ByteBuffer;
 
@@ -36,7 +37,7 @@ public class StreamController implements IAudioEncodeDelegate, IVideoEncodeDeleg
     }
 
     public synchronized void start() {
-        ControlThread.get().post(new Runnable() {
+        GlobalAsyncThread.post(new Runnable() {
             @Override
             public void run() {
                 if(mPacker == null) {
@@ -56,7 +57,7 @@ public class StreamController implements IAudioEncodeDelegate, IVideoEncodeDeleg
     }
 
     public synchronized void stop() {
-        ControlThread.get().post(new Runnable() {
+        GlobalAsyncThread.post(new Runnable() {
             @Override
             public void run() {
                 mVideoController.setVideoEncoderListener(null);
@@ -74,7 +75,7 @@ public class StreamController implements IAudioEncodeDelegate, IVideoEncodeDeleg
     }
 
     public synchronized void pause() {
-        ControlThread.get().post(new Runnable() {
+        GlobalAsyncThread.post(new Runnable() {
             @Override
             public void run() {
                 mAudioController.pause();
@@ -84,7 +85,7 @@ public class StreamController implements IAudioEncodeDelegate, IVideoEncodeDeleg
     }
 
     public synchronized void resume() {
-        ControlThread.get().post(new Runnable() {
+        GlobalAsyncThread.post(new Runnable() {
             @Override
             public void run() {
                 mAudioController.resume();

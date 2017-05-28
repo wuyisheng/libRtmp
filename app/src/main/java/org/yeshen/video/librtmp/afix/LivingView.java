@@ -3,8 +3,6 @@ package org.yeshen.video.librtmp.afix;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.media.AudioManager;
-import android.media.MediaCodec;
-import android.media.MediaCodecInfo;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -20,11 +18,13 @@ import org.yeshen.video.librtmp.afix.net.sender.Sender;
 import org.yeshen.video.librtmp.core.ILivingView;
 import org.yeshen.video.librtmp.core.delegate.CameraOpenDelegate;
 import org.yeshen.video.librtmp.core.delegate.ILivingDelegate;
-import org.yeshen.video.librtmp.tools.AndroidUntil;
 import org.yeshen.video.librtmp.tools.AndroidWakeLock;
+import org.yeshen.video.librtmp.tools.GlobalAsyncThread;
 import org.yeshen.video.librtmp.tools.Lg;
 import org.yeshen.video.librtmp.tools.Options;
 import org.yeshen.video.librtmp.tools.WeakHandler;
+
+import static org.yeshen.video.librtmp.core.IRenderer.NO_ERROR;
 
 /*********************************************************************
  * Created by yeshen on 2017/05/21.
@@ -33,17 +33,6 @@ import org.yeshen.video.librtmp.tools.WeakHandler;
 
 
 public class LivingView extends FrameLayout implements ILivingView {
-    public static final int NO_ERROR = 0;
-    public static final int VIDEO_TYPE_ERROR = 1;
-    public static final int AUDIO_TYPE_ERROR = 2;
-    public static final int VIDEO_CONFIGURATION_ERROR = 3;
-    public static final int AUDIO_CONFIGURATION_ERROR = 4;
-    public static final int CAMERA_ERROR = 5;
-    public static final int AUDIO_ERROR = 6;
-    public static final int AUDIO_AEC_ERROR = 7;
-    public static final int SDK_VERSION_ERROR = 8;
-
-    private static final String TAG = LivingView.class.getSimpleName();
     private StreamController mStreamController;
     private AndroidWakeLock mWakeLock;
     private ILivingDelegate mLivingDelegate;
@@ -152,10 +141,10 @@ public class LivingView extends FrameLayout implements ILivingView {
 
     @Override
     public void start() {
-        ControlThread.get().post(new Runnable() {
+        GlobalAsyncThread.post(new Runnable() {
             @Override
             public void run() {
-                final int check = check();
+                final int check = mRenderer.checkStatus();
                 if (check == NO_ERROR) {
                     chooseVoiceMode();
                     mWakeLock.acquire();
@@ -247,60 +236,6 @@ public class LivingView extends FrameLayout implements ILivingView {
         }
     }
 
-    private int check() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            Lg.d("Android sdk version error");
-            return SDK_VERSION_ERROR;
-        }
-        if (!checkAec()) {
-            Lg.d("Doesn't support audio aec");
-            return AUDIO_AEC_ERROR;
-        }
-        if (!isCameraOpen()) {
-            Lg.d("The camera have not open");
-            return CAMERA_ERROR;
-        }
-        MediaCodecInfo videoMediaCodecInfo = AndroidUntil.selectCodec(Options.getInstance().video.mime);
-        if (videoMediaCodecInfo == null) {
-            Lg.d("Video type error");
-            return VIDEO_TYPE_ERROR;
-        }
-        MediaCodecInfo audioMediaCodecInfo = AndroidUntil.selectCodec(Options.getInstance().audio.mime);
-        if (audioMediaCodecInfo == null) {
-            Lg.d("Audio type error");
-            return AUDIO_TYPE_ERROR;
-        }
-        MediaCodec videoMediaCodec = AndroidUntil.getVideoMediaCodec();
-        if (videoMediaCodec == null) {
-            Lg.d("Video mediacodec configuration error");
-            return VIDEO_CONFIGURATION_ERROR;
-        }
-        MediaCodec audioMediaCodec = AndroidUntil.getAudioMediaCodec();
-        if (audioMediaCodec == null) {
-            Lg.d("Audio mediacodec configuration error");
-            return AUDIO_CONFIGURATION_ERROR;
-        }
-        if (!AndroidUntil.checkMicSupport()) {
-            Lg.d("Can not record the audio");
-            return AUDIO_ERROR;
-        }
-        return NO_ERROR;
-    }
-
-    private boolean checkAec() {
-        if (Options.getInstance().audio.aec) {
-            if (Options.getInstance().audio.frequency == 8000 ||
-                    Options.getInstance().audio.frequency == 16000) {
-                if (Options.getInstance().audio.channelCount == 1) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            return true;
-        }
-    }
-
     private void chooseVoiceMode() {
         AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
         if (Options.getInstance().audio.aec) {
@@ -310,10 +245,6 @@ public class LivingView extends FrameLayout implements ILivingView {
             audioManager.setMode(AudioManager.MODE_NORMAL);
             audioManager.setSpeakerphoneOn(false);
         }
-    }
-
-    private boolean isCameraOpen() {
-        return mRenderer.isCameraOpen();
     }
 
     private CameraOpenDelegate mCameraOpenListener = new CameraOpenDelegate() {

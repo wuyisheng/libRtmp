@@ -7,6 +7,7 @@ import android.media.MediaCodec;
 import org.yeshen.video.librtmp.core.IAudio;
 import org.yeshen.video.librtmp.core.delegate.IAudioEncodeDelegate;
 import org.yeshen.video.librtmp.tools.AndroidUntil;
+import org.yeshen.video.librtmp.tools.Lg;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -29,7 +30,7 @@ public class ControllerAudio implements IAudio {
         try {
             mAudioRecord.startRecording();
         } catch (Exception e) {
-            e.printStackTrace();
+            Lg.e(e);
         }
         mAudioProcessor = new AudioProcessor(mAudioRecord);
         mAudioProcessor.setAudioHEncodeListener(mListener);
