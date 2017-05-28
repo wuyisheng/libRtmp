@@ -29,8 +29,6 @@ public class Options {
     public boolean isProvider = true;
 
     //视频录制配置
-    public int height = DEFAULT_HEIGHT;
-    public int width = DEFAULT_WIDTH;
     public int fps = DEFAULT_FPS;
     public int bufferSize = DEFAULT_BUFFER_SIZE;
     public boolean front = true;
@@ -95,8 +93,6 @@ public class Options {
     public void setSize(int width, int height) {
         video.width = width;
         video.height = height;
-        this.width = width;
-        this.height = height;
     }
 
     @Override

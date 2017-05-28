@@ -1,12 +1,13 @@
 package org.yeshen.video.librtmp.android;
 
+import android.content.Context;
 import android.graphics.PointF;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.text.TextUtils;
 
 import org.yeshen.video.librtmp.afix.AndroidUntil;
-import org.yeshen.video.librtmp.tools.Options;
+import org.yeshen.video.librtmp.afix.Cameras;
 
 import java.nio.FloatBuffer;
 import java.util.LinkedList;
@@ -84,22 +85,19 @@ public abstract class Effect {
     }
 
     private void initSize() {
-//        if(CameraHolder.instance().getState() != CameraHolder.State.PREVIEW) {
-//            return;
-//        }
-//        CameraData cameraData = CameraHolder.instance().getCameraData();
-//        int width = cameraData.cameraWidth;
-//        int height = cameraData.cameraHeight;
-//        if(CameraHolder.instance().isLandscape()) {
-//            mWidth = Math.max(width, height);
-//            mHeight = Math.min(width, height);
-//        } else {
-//            mWidth = Math.min(width, height);
-//            mHeight = Math.max(width, height);
-//        }
-
-        mWidth = Options.getInstance().width;
-        mHeight = Options.getInstance().height;
+        if(Cameras.instance().getState() != Cameras.State.PREVIEW) {
+            return;
+        }
+        Cameras.CameraMessage cameraData = Cameras.instance().getCameraData();
+        int width = cameraData.cameraWidth;
+        int height = cameraData.cameraHeight;
+        if(Cameras.instance().isLandscape()) {
+            mWidth = Math.max(width, height);
+            mHeight = Math.min(width, height);
+        } else {
+            mWidth = Math.min(width, height);
+            mHeight = Math.max(width, height);
+        }
     }
 
     private void createEffectTexture() {
@@ -287,6 +285,22 @@ public abstract class Effect {
         if (-1 != mProgram) {
             GLES20.glDeleteProgram(mProgram);
             mProgram = -1;
+        }
+    }
+
+    public static Effect getDefault(Context context){
+        return new NullEffect(context);
+    }
+
+    private static class NullEffect extends Effect{
+        private static final String NULL_EFFECT_VERTEX = "null/vertexshader.glsl";
+        private static final String NULL_EFFECT_FRAGMENT = "null/fragmentshader.glsl";
+
+        NullEffect(Context context) {
+            super();
+            String vertexShader = AndroidUntil.getFileContextFromAssets(context, NULL_EFFECT_VERTEX);
+            String fragmentShader = AndroidUntil.getFileContextFromAssets(context, NULL_EFFECT_FRAGMENT);
+            super.setShader(vertexShader, fragmentShader);
         }
     }
 }

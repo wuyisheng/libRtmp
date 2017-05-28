@@ -14,22 +14,13 @@ import org.yeshen.video.librtmp.afix.AndroidUntil;
 
 @TargetApi(18)
 public class InputSurface {
-    //---------------------------------------------------------------------
-    // CONSTANTS
-    //---------------------------------------------------------------------
     private static final int EGL_RECORDABLE_ANDROID = 0x3142;
 
-    //---------------------------------------------------------------------
-    // MEMBERS
-    //---------------------------------------------------------------------
     private Surface mSurface    = null;
     private EGLDisplay mEGLDisplay = null;
     private EGLContext mEGLContext = null;
     private EGLSurface mEGLSurface = null;
 
-    //---------------------------------------------------------------------
-    // PUBLIC METHODS
-    //---------------------------------------------------------------------
     public InputSurface(Surface surface) {
         if (surface == null) {
             throw new NullPointerException();
@@ -70,9 +61,6 @@ public class InputSurface {
         EGLExt.eglPresentationTimeANDROID(mEGLDisplay, mEGLSurface, nsecs);
     }
 
-    //---------------------------------------------------------------------
-    // PRIVATE...
-    //---------------------------------------------------------------------
     private void eglSetup() {
         mEGLDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY);
         if (mEGLDisplay == EGL14.EGL_NO_DISPLAY) {

@@ -27,7 +27,6 @@ import java.nio.FloatBuffer;
 @TargetApi(18)
 public class RenderSrfTex {
     private final FloatBuffer mNormalVtxBuf = AndroidUntil.createVertexBuffer();
-    private final FloatBuffer mNormalTexCoordBuf = AndroidUntil.createTexCoordBuffer();
 
     private int mFboTexId;
     private final MyRecorder mRecorder;
@@ -51,15 +50,9 @@ public class RenderSrfTex {
 
     private FloatBuffer mCameraTexCoordBuffer;
 
-    private int mWatermarkTextureId = -1;
-
     public RenderSrfTex(int id, MyRecorder recorder) {
         mFboTexId = id;
         mRecorder = recorder;
-    }
-
-    public void setTextureId(int textureId) {
-        mFboTexId = textureId;
     }
 
     public void setVideoSize(int width, int height) {
@@ -71,7 +64,7 @@ public class RenderSrfTex {
     private void initCameraTexCoordBuffer() {
         int cameraWidth;
         int cameraHeight;
-        CameraData cameraData = Cameras.instance().getCameraData();
+        Cameras.CameraMessage cameraData = Cameras.instance().getCameraData();
         int width = cameraData.cameraWidth;
         int height = cameraData.cameraHeight;
         if (Cameras.instance().isLandscape()) {

@@ -4,7 +4,6 @@ import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 
-import org.yeshen.video.librtmp.android.CameraData;
 import org.yeshen.video.librtmp.exception.CameraHardwareException;
 import org.yeshen.video.librtmp.exception.CameraNotSupportException;
 import org.yeshen.video.librtmp.tools.Lg;
@@ -26,7 +25,7 @@ public abstract class Cameras {
         return sInstance;
     }
 
-    public abstract CameraData getCameraData();
+    public abstract CameraMessage getCameraData();
 
     public abstract boolean isLandscape();
 
@@ -66,9 +65,9 @@ public abstract class Cameras {
     private static class CameraImpl extends Cameras {
         private static final String TAG = "CameraHolder";
 
-        private List<CameraData> mCameraDatas;
+        private List<CameraMessage> mCameraDatas;
         private Camera mCameraDevice;
-        private CameraData mCameraData;
+        private CameraMessage mCameraData;
         private State mState;
         private SurfaceTexture mTexture;
         private boolean isTouchMode = false;
@@ -79,7 +78,7 @@ public abstract class Cameras {
         }
 
         @Override
-        public CameraData getCameraData() {
+        public CameraMessage getCameraData() {
             return mCameraData;
         }
 
@@ -95,7 +94,7 @@ public abstract class Cameras {
             if (mCameraDatas == null || mCameraDatas.size() == 0) {
                 mCameraDatas = AndroidUntil.getAllCamerasData(isOpenBackFirst);
             }
-            CameraData cameraData = mCameraDatas.get(0);
+            CameraMessage cameraData = mCameraDatas.get(0);
             if (mCameraDevice != null && mCameraData == cameraData) {
                 return mCameraDevice;
             }
@@ -287,13 +286,13 @@ public abstract class Cameras {
                 return false;
             }
             try {
-                CameraData camera = mCameraDatas.remove(1);
+                CameraMessage camera = mCameraDatas.remove(1);
                 mCameraDatas.add(0, camera);
                 openCamera();
                 startPreview();
                 return true;
             } catch (Exception e) {
-                CameraData camera = mCameraDatas.remove(1);
+                CameraMessage camera = mCameraDatas.remove(1);
                 mCameraDatas.add(0, camera);
                 try {
                     openCamera();
@@ -332,4 +331,23 @@ public abstract class Cameras {
 
     }
 
+    public static class CameraMessage {
+
+        public static final int FACING_FRONT = 1;
+        public static final int FACING_BACK = 2;
+
+        public int cameraID;            //camera的id
+        public int cameraFacing;        //区分前后摄像头
+        public int cameraWidth;         //camera的宽度
+        public int cameraHeight;        //camera的高度
+        public boolean hasLight;
+        public int orientation;
+        public boolean supportTouchFocus;
+        public boolean touchFocusMode;
+
+        public CameraMessage(int id, int facing) {
+            cameraID = id;
+            cameraFacing = facing;
+        }
+    }
 }

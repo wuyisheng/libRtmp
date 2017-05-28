@@ -33,6 +33,7 @@ public class RenderSurfaceView extends GLSurfaceView {
         init();
     }
 
+    @SuppressWarnings("deprecation")
     private void init() {
         mRenderer = new MyRenderer(this);
         setEGLContextClientVersion(2);

@@ -49,7 +49,7 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 
     public MyRenderer(GLSurfaceView view) {
         mView = view;
-        mEffect = new NullEffect(mView.getContext());
+        mEffect = Effect.getDefault(mView.getContext());
     }
 
     public void setCameraOpenListener(CameraListener cameraOpenListener) {
@@ -59,8 +59,8 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public void setVideoConfiguration() {
         mVideoWidth = AndroidUntil.getVideoSize(Options.getInstance().video.width);
         mVideoHeight = AndroidUntil.getVideoSize(Options.getInstance().video.height);
-        Options.getInstance().width = mVideoWidth;
-        Options.getInstance().height = mVideoHeight;
+        Options.getInstance().video.width = mVideoWidth;
+        Options.getInstance().video.height = mVideoHeight;
     }
 
     public void setRecorder(MyRecorder recorder) {
@@ -95,8 +95,7 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
                 initScreenTexture();
             }
             mRenderScreen.setScreenSize(width, height);
-            Options.getInstance().width = mVideoWidth;
-            Options.getInstance().height = mVideoHeight;
+            Options.getInstance().video.width = mVideoWidth;
         }
     }
 
@@ -200,18 +199,4 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         return isCameraOpen;
     }
 
-
-    public void setEffect(Effect effect) {
-        mEffect.release();
-        mEffect = effect;
-        effect.setTextureId(mSurfaceTextureId);
-        effect.prepare();
-        mEffectTextureId = effect.getEffertedTextureId();
-        if(mRenderScreen != null) {
-            mRenderScreen.setTextureId(mEffectTextureId);
-        }
-        if(mRenderSrfTex != null) {
-            mRenderSrfTex.setTextureId(mEffectTextureId);
-        }
-    }
 }

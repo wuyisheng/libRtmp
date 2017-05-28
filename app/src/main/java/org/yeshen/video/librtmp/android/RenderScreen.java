@@ -47,14 +47,10 @@ public class RenderScreen {
         initCameraTexCoordBuffer();
     }
 
-    public void setTextureId(int textureId) {
-        mFboTexId = textureId;
-    }
-
     private void initCameraTexCoordBuffer() {
         int cameraWidth;
         int cameraHeight;
-        CameraData cameraData = Cameras.instance().getCameraData();
+        Cameras.CameraMessage cameraData = Cameras.instance().getCameraData();
         int width = cameraData.cameraWidth;
         int height = cameraData.cameraHeight;
         if (Cameras.instance().isLandscape()) {

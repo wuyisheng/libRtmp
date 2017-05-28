@@ -17,7 +17,7 @@ import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.os.Build;
 
-import org.yeshen.video.librtmp.android.CameraData;
+import org.yeshen.video.librtmp.afix.Cameras.CameraMessage;
 import org.yeshen.video.librtmp.exception.CameraDisabledException;
 import org.yeshen.video.librtmp.exception.CameraNotSupportException;
 import org.yeshen.video.librtmp.exception.NoCameraException;
@@ -68,21 +68,21 @@ public class AndroidUntil {
             "    gl_FragColor = vec4(tc.r, tc.g, tc.b, 1.0);\n" +
             "}";
 
-    public static List<CameraData> getAllCamerasData(boolean isBackFirst) {
-        ArrayList<CameraData> cameraDatas = new ArrayList<>();
+    public static List<CameraMessage> getAllCamerasData(boolean isBackFirst) {
+        ArrayList<CameraMessage> cameraDatas = new ArrayList<>();
         Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
         int numberOfCameras = Camera.getNumberOfCameras();
         for (int i = 0; i < numberOfCameras; i++) {
             Camera.getCameraInfo(i, cameraInfo);
             if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                CameraData cameraData = new CameraData(i, CameraData.FACING_FRONT);
+                CameraMessage cameraData = new CameraMessage(i, CameraMessage.FACING_FRONT);
                 if(isBackFirst) {
                     cameraDatas.add(cameraData);
                 } else {
                     cameraDatas.add(0, cameraData);
                 }
             } else if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
-                CameraData cameraData = new CameraData(i, CameraData.FACING_BACK);
+                CameraMessage cameraData = new CameraMessage(i, CameraMessage.FACING_BACK);
                 if(isBackFirst) {
                     cameraDatas.add(0, cameraData);
                 } else {
@@ -93,7 +93,7 @@ public class AndroidUntil {
         return cameraDatas;
     }
 
-    public static void initCameraParams(Camera camera, CameraData cameraData, boolean isTouchMode)
+    public static void initCameraParams(Camera camera, CameraMessage cameraData, boolean isTouchMode)
             throws CameraNotSupportException {
         boolean isLandscape = (Options.getInstance().camera.orientation != Options.Orientation.PORTRAIT);
         int cameraWidth = Math.max(Options.getInstance().camera.height, Options.getInstance().camera.width);
@@ -152,7 +152,7 @@ public class AndroidUntil {
         return closestRange;
     }
 
-    public static void setPreviewSize(Camera camera, CameraData cameraData, int width, int height,
+    public static void setPreviewSize(Camera camera, CameraMessage cameraData, int width, int height,
                                       Camera.Parameters parameters) throws CameraNotSupportException {
         Camera.Size size = getOptimalPreviewSize(camera, width, height);
         if(size == null) {
@@ -171,7 +171,7 @@ public class AndroidUntil {
         }
     }
 
-    private static void setOrientation(CameraData cameraData, boolean isLandscape, Camera camera) {
+    private static void setOrientation(CameraMessage cameraData, boolean isLandscape, Camera camera) {
         int orientation = getDisplayOrientation(cameraData.cameraID);
         if(isLandscape) {
             orientation = orientation - 90;
@@ -179,7 +179,7 @@ public class AndroidUntil {
         camera.setDisplayOrientation(orientation);
     }
 
-    private static void setFocusMode(Camera camera, CameraData cameraData, boolean isTouchMode) {
+    private static void setFocusMode(Camera camera, CameraMessage cameraData, boolean isTouchMode) {
         cameraData.supportTouchFocus = supportTouchFocus(camera);
         if(!cameraData.supportTouchFocus) {
             setAutoFocusMode(camera);
@@ -278,7 +278,7 @@ public class AndroidUntil {
         if (dpm.getCameraDisabled(null)) {
             throw new CameraDisabledException();
         }
-        List<CameraData> cameraDatas = getAllCamerasData(false);
+        List<CameraMessage> cameraDatas = getAllCamerasData(false);
         if(cameraDatas.size() == 0) {
             throw new NoCameraException();
         }
