@@ -1,13 +1,11 @@
 package org.yeshen.video.librtmp.android;
 
 import android.annotation.TargetApi;
-import android.graphics.Bitmap;
 import android.opengl.EGL14;
 import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;
 import android.opengl.EGLSurface;
 import android.opengl.GLES20;
-import android.opengl.GLUtils;
 import android.opengl.Matrix;
 
 import org.yeshen.video.librtmp.afix.AndroidUntil;
@@ -53,8 +51,6 @@ public class RenderSrfTex {
 
     private FloatBuffer mCameraTexCoordBuffer;
 
-    private Bitmap mWatermarkImg;
-    private FloatBuffer mWatermarkVertexBuffer;
     private int mWatermarkTextureId = -1;
 
     public RenderSrfTex(int id, MyRecorder recorder) {
@@ -64,59 +60,6 @@ public class RenderSrfTex {
 
     public void setTextureId(int textureId) {
         mFboTexId = textureId;
-    }
-
-    public void setWatermark(Watermark watermark) {
-        mWatermarkImg = watermark.markImg;
-        initWatermarkVertexBuffer(watermark.width, watermark.height, watermark.orientation, watermark.vMargin, watermark.hMargin);
-    }
-
-    private void initWatermarkVertexBuffer(int width, int height, int orientation, int vMargin, int hMargin) {
-
-        boolean isTop, isRight;
-        if(orientation == AndroidUntil.WATERMARK_ORIENTATION_TOP_LEFT
-                || orientation == AndroidUntil.WATERMARK_ORIENTATION_TOP_RIGHT) {
-            isTop = true;
-        } else {
-            isTop = false;
-        }
-
-        if(orientation == AndroidUntil.WATERMARK_ORIENTATION_TOP_RIGHT
-                || orientation == AndroidUntil.WATERMARK_ORIENTATION_BOTTOM_RIGHT) {
-            isRight = true;
-        } else {
-            isRight = false;
-        }
-
-        float leftX = (mVideoWidth/2.0f - hMargin - width)/(mVideoWidth/2.0f);
-        float rightX = (mVideoWidth/2.0f - hMargin)/(mVideoWidth/2.0f);
-
-        float topY = (mVideoHeight/2.0f - vMargin)/(mVideoHeight/2.0f);
-        float bottomY = (mVideoHeight/2.0f - vMargin - height)/(mVideoHeight/2.0f);
-
-        float temp;
-
-        if(!isRight) {
-            temp = leftX;
-            leftX = -rightX;
-            rightX = -temp;
-        }
-        if(!isTop) {
-            temp = topY;
-            topY = -bottomY;
-            bottomY = -temp;
-        }
-        final float watermarkCoords[]= {
-                leftX,  bottomY, 0.0f,
-                leftX, topY, 0.0f,
-                rightX,  bottomY, 0.0f,
-                rightX, topY, 0.0f
-        };
-        ByteBuffer bb = ByteBuffer.allocateDirect(watermarkCoords.length * 4);
-        bb.order(ByteOrder.nativeOrder());
-        mWatermarkVertexBuffer = bb.asFloatBuffer();
-        mWatermarkVertexBuffer.put(watermarkCoords);
-        mWatermarkVertexBuffer.position(0);
     }
 
     public void setVideoSize(int width, int height) {
@@ -222,54 +165,11 @@ public class RenderSrfTex {
 
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 
-            //绘制纹理
-            drawWatermark();
-
             mRecorder.swapBuffers();
 
             AndroidUntil.checkGlError("draw_E");
         }
         restoreRenderState();
-    }
-
-
-    private void drawWatermark() {
-        if(mWatermarkImg == null) {
-            return;
-        }
-        GLES20.glUniformMatrix4fv(muPosMtxHandle, 1, false, mNormalMtx, 0);
-
-        GLES20.glVertexAttribPointer(maPositionHandle,
-                3, GLES20.GL_FLOAT, false, 4 * 3, mWatermarkVertexBuffer);
-        GLES20.glEnableVertexAttribArray(maPositionHandle);
-
-        mNormalTexCoordBuf.position(0);
-        GLES20.glVertexAttribPointer(maTexCoordHandle,
-                2, GLES20.GL_FLOAT, false, 4 * 2, mNormalTexCoordBuf);
-        GLES20.glEnableVertexAttribArray(maTexCoordHandle);
-
-        if(mWatermarkTextureId == -1) {
-            int[] textures = new int[1];
-            GLES20.glGenTextures(1, textures, 0);
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textures[0]);
-            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, mWatermarkImg, 0);
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER,
-                    GLES20.GL_LINEAR);
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER,
-                    GLES20.GL_LINEAR);
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S,
-                    GLES20.GL_CLAMP_TO_EDGE);
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T,
-                    GLES20.GL_CLAMP_TO_EDGE);
-            mWatermarkTextureId = textures[0];
-        }
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mWatermarkTextureId);
-
-        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-        GLES20.glEnable(GLES20.GL_BLEND);
-
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-        GLES20.glDisable(GLES20.GL_BLEND);
     }
 
     private void initGL() {

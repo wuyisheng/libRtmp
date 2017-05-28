@@ -13,6 +13,7 @@ import org.yeshen.video.librtmp.exception.CameraDisabledException;
 import org.yeshen.video.librtmp.exception.CameraHardwareException;
 import org.yeshen.video.librtmp.exception.CameraNotSupportException;
 import org.yeshen.video.librtmp.exception.NoCameraException;
+import org.yeshen.video.librtmp.tools.Options;
 import org.yeshen.video.librtmp.tools.WeakHandler;
 
 import javax.microedition.khronos.egl.EGLConfig;
@@ -30,7 +31,6 @@ import javax.microedition.khronos.opengles.GL10;
 public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
     private int mSurfaceTextureId = -1;
     private SurfaceTexture mSurfaceTexture;
-    private Watermark mWatermark;
     private RenderScreen mRenderScreen;
     private RenderSrfTex mRenderSrfTex;
 
@@ -40,7 +40,6 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private boolean isCameraOpen;
     private Effect mEffect;
     private int mEffectTextureId;
-    private VideoConfiguration mVideoConfiguration;
 
     private boolean updateSurface = false;
     private final float[] mTexMtx = AndroidUntil.createIdentityMtx();
@@ -58,12 +57,11 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     }
 
     public void setVideoConfiguration(VideoConfiguration videoConfiguration) {
-        mVideoConfiguration = videoConfiguration;
+        VideoConfiguration mVideoConfiguration = videoConfiguration;
         mVideoWidth = AndroidUntil.getVideoSize(mVideoConfiguration.width);
         mVideoHeight = AndroidUntil.getVideoSize(mVideoConfiguration.height);
-        if(mRenderScreen != null) {
-            mRenderScreen.setVideoSize(mVideoWidth, mVideoHeight);
-        }
+        Options.getInstance().width = mVideoWidth;
+        Options.getInstance().height = mVideoHeight;
     }
 
     public void setRecorder(MyRecorder recorder) {
@@ -71,9 +69,6 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             if (recorder != null) {
                 mRenderSrfTex = new RenderSrfTex(mEffectTextureId, recorder);
                 mRenderSrfTex.setVideoSize(mVideoWidth, mVideoHeight);
-                if(mWatermark != null) {
-                    mRenderSrfTex.setWatermark(mWatermark);
-                }
             } else {
                 mRenderSrfTex = null;
             }
@@ -101,12 +96,8 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
                 initScreenTexture();
             }
             mRenderScreen.setSreenSize(width, height);
-            if (mVideoConfiguration != null) {
-                mRenderScreen.setVideoSize(mVideoWidth, mVideoHeight);
-            }
-            if (mWatermark != null) {
-                mRenderScreen.setWatermark(mWatermark);
-            }
+            Options.getInstance().width = mVideoWidth;
+            Options.getInstance().height = mVideoHeight;
         }
     }
 
@@ -210,15 +201,6 @@ public class MyRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         return isCameraOpen;
     }
 
-    public void setWatermark(Watermark watermark) {
-        mWatermark = watermark;
-        if(mRenderScreen != null) {
-            mRenderScreen.setWatermark(watermark);
-        }
-        if(mRenderSrfTex != null) {
-            mRenderSrfTex.setWatermark(watermark);
-        }
-    }
 
     public void setEffect(Effect effect) {
         mEffect.release();
