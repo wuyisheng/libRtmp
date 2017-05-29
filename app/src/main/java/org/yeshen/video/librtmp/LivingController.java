@@ -24,7 +24,7 @@ class LivingController {
     LivingController(ILivingView view) {
         Options.getInstance().setOrientation(Options.Orientation.PORTRAIT);
         Options.getInstance().setFacing(Options.Facing.BACK);
-        Options.getInstance().setSize(640, 360);
+        Options.getInstance().setSize(420, 640);
         view.syncConfig();
 
         view.setDelegate(new ICameraOpenDelegate() {

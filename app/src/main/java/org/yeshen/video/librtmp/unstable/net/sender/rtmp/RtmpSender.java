@@ -7,6 +7,7 @@ import org.yeshen.video.librtmp.unstable.net.sender.rtmp.io.RtmpConnection;
 import org.yeshen.video.librtmp.unstable.net.sender.sendqueue.ISendQueue;
 import org.yeshen.video.librtmp.unstable.net.sender.sendqueue.NormalSendQueue;
 import org.yeshen.video.librtmp.unstable.net.sender.sendqueue.SendQueueListener;
+import org.yeshen.video.librtmp.unstable.tools.GlobalAsyncThread;
 import org.yeshen.video.librtmp.unstable.tools.Options;
 import org.yeshen.video.librtmp.unstable.tools.WeakHandler;
 
@@ -22,12 +23,7 @@ import org.yeshen.video.librtmp.unstable.tools.WeakHandler;
 public class RtmpSender implements Sender, SendQueueListener {
 
     public static RtmpSender getRtmpSender() {
-        RtmpSender sender = new RtmpSender();
-        String adress = Options.getInstance().toString();
-        sender.setVideoParams(640, 360);
-        sender.setAudioParams(Options.DEFAULT_FREQUENCY, 16, false);
-        sender.setAddress(adress);
-        return sender;
+        return new RtmpSender();
     }
 
     private RtmpConnection rtmpConnection;
@@ -74,24 +70,12 @@ public class RtmpSender implements Sender, SendQueueListener {
         void onNetBad();
     }
 
-    public RtmpSender() {
+    private RtmpSender() {
         rtmpConnection = new RtmpConnection();
-    }
-
-    public void setAddress(String url) {
-        mRtmpUrl = url;
-    }
-
-    public void setSendQueue(ISendQueue sendQueue) {
-        mSendQueue = sendQueue;
-    }
-
-    public void setVideoParams(int width, int height) {
-        rtmpConnection.setVideoParams(width, height);
-    }
-
-    public void setAudioParams(int sampleRate, int sampleSize, boolean isStereo) {
-        rtmpConnection.setAudioParams(sampleRate, sampleSize, isStereo);
+        rtmpConnection.setVideoParams(Options.getInstance().video.width,
+                Options.getInstance().video.height);
+        rtmpConnection.setAudioParams(Options.DEFAULT_FREQUENCY, 16, false);
+        mRtmpUrl = Options.getInstance().toString();
     }
 
     public void setSenderListener(OnSenderListener listener) {
@@ -100,22 +84,17 @@ public class RtmpSender implements Sender, SendQueueListener {
 
     public void connect() {
         rtmpConnection.setSendQueue(mSendQueue);
-        new Thread(new Runnable() {
+        GlobalAsyncThread.post(new Runnable() {
             @Override
             public void run() {
-                connectNotInUi();
+                rtmpConnection.setConnectListener(listener);
+                rtmpConnection.connect(mRtmpUrl);
             }
-        }).start();
+        });
         if (mListener != null) {
             mListener.onConnecting();
         }
     }
-
-    private synchronized void connectNotInUi() {
-        rtmpConnection.setConnectListener(listener);
-        rtmpConnection.connect(mRtmpUrl);
-    }
-
 
     @Override
     public synchronized void start() {
@@ -139,6 +118,29 @@ public class RtmpSender implements Sender, SendQueueListener {
         rtmpConnection.setConnectListener(null);
         mSendQueue.setSendQueueListener(null);
         mSendQueue.stop();
+    }
+
+
+    private void sendDisconnectMsg() {
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mListener != null) {
+                    mListener.onDisConnected();
+                }
+            }
+        });
+    }
+
+    private void sendPublishFail() {
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mListener != null) {
+                    mListener.onPublishFail();
+                }
+            }
+        });
     }
 
     private RtmpConnectListener listener = new RtmpConnectListener() {
@@ -215,25 +217,4 @@ public class RtmpSender implements Sender, SendQueueListener {
         }
     };
 
-    public void sendDisconnectMsg() {
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mListener != null) {
-                    mListener.onDisConnected();
-                }
-            }
-        });
-    }
-
-    public void sendPublishFail() {
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mListener != null) {
-                    mListener.onPublishFail();
-                }
-            }
-        });
-    }
 }

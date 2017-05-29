@@ -61,7 +61,7 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
     private boolean publishPermitted;
     private ISendQueue mSendQueue;
 
-    public enum State {
+    private enum State {
         INIT,
         HANDSHAKE,
         CONNECTING,
@@ -70,14 +70,14 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
         LIVING
     }
 
-    public static class ConnectData {
-        public String appName;
-        public String streamName;
-        public String swfUrl;
-        public String tcUrl;
-        public String pageUrl;
-        public int port;
-        public String host;
+    private static class ConnectData {
+        String appName;
+        String streamName;
+        String swfUrl;
+        String tcUrl;
+        String pageUrl;
+        int port;
+        String host;
     }
 
     public void setConnectListener(RtmpConnectListener listener) {
@@ -259,55 +259,62 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
 
     private void handleRxCommandInvoke(Command command) {
         String commandName = command.getCommandName();
-        if(commandName.equals("_result")) {
-            String method = sessionInfo.takeInvokedCommand(command.getTransactionId());
-            Log.d(TAG, "Got result for invoked method: " + method);
-            if ("connect".equals(method)) {
-                if(listener != null) {
-                    listener.onRtmpConnectSuccess();
+        switch (commandName) {
+            case "_result": {
+                String method = sessionInfo.takeInvokedCommand(command.getTransactionId());
+                Log.d(TAG, "Got result for invoked method: " + method);
+                if ("connect".equals(method)) {
+                    if (listener != null) {
+                        listener.onRtmpConnectSuccess();
+                    }
+                    createStream();
+                } else if ("createStream".equals(method)) {
+                    currentStreamId = (int) ((AmfNumber) command.getData().get(1)).getValue();
+                    if (listener != null) {
+                        listener.onCreateStreamSuccess();
+                    }
+                    fmlePublish();
                 }
-                createStream();
-            } else if("createStream".equals(method)) {
-                currentStreamId = (int) ((AmfNumber) command.getData().get(1)).getValue();
-                if(listener != null) {
-                    listener.onCreateStreamSuccess();
-                }
-                fmlePublish();
+                break;
             }
-        } else if(commandName.equals("_error")) {
-            String method = sessionInfo.takeInvokedCommand(command.getTransactionId());
-            Log.d(TAG, "Got error for invoked method: " + method);
-            if ("connect".equals(method)) {
-                stop();
-                if(listener != null) {
-                    listener.onRtmpConnectFail();
+            case "_error": {
+                String method = sessionInfo.takeInvokedCommand(command.getTransactionId());
+                Log.d(TAG, "Got error for invoked method: " + method);
+                if ("connect".equals(method)) {
+                    stop();
+                    if (listener != null) {
+                        listener.onRtmpConnectFail();
+                    }
+                } else if ("createStream".equals(method)) {
+                    stop();
+                    if (listener != null) {
+                        listener.onCreateStreamFail();
+                    }
                 }
-            } else if("createStream".equals(method)) {
-                stop();
-                if(listener != null) {
-                    listener.onCreateStreamFail();
-                }
+                break;
             }
-        } else if(commandName.equals("onStatus")) {
-            String code = ((AmfString) ((AmfObject) command.getData().get(1)).getProperty("code")).getValue();
-            if (code.equals("NetStream.Publish.Start")) {
-                Log.d(TAG, "Got publish start success");
-                state = State.LIVING;
-                if(listener != null) {
-                    listener.onPublishSuccess();
+            case "onStatus":
+                String code = ((AmfString) ((AmfObject) command.getData().get(1)).getProperty("code")).getValue();
+                if (code.equals("NetStream.Publish.Start")) {
+                    Log.d(TAG, "Got publish start success");
+                    state = State.LIVING;
+                    if (listener != null) {
+                        listener.onPublishSuccess();
+                    }
+                    onMetaData();
+                    // We can now publish AV data
+                    publishPermitted = true;
+                } else {
+                    Log.d(TAG, "Got publish start fail");
+                    stop();
+                    if (listener != null) {
+                        listener.onPublishFail();
+                    }
                 }
-                onMetaData();
-                // We can now publish AV data
-                publishPermitted = true;
-            } else {
-                Log.d(TAG, "Got publish start fail");
-                stop();
-                if(listener != null) {
-                    listener.onPublishFail();
-                }
-            }
-        } else {
-            Log.d(TAG, "Got Command result: " + commandName);
+                break;
+            default:
+                Log.d(TAG, "Got Command result: " + commandName);
+                break;
         }
     }
 
@@ -432,7 +439,7 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
         mSendQueue.putFrame(frame);
     }
 
-    public void closeStream() throws IllegalStateException {
+    private void closeStream() throws IllegalStateException {
         if (currentStreamId == -1) {
             return;
         }
@@ -467,7 +474,6 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
     public State getState() {
         return state;
     }
-
 
     @Override
     public void onStreamEnd() {

@@ -1,13 +1,10 @@
 package org.yeshen.video.librtmp.internal.net.carriers;
 
-import android.os.AsyncTask;
-
-import org.yeshen.video.librtmp.unstable.net.sender.Sender;
-import org.yeshen.video.librtmp.unstable.net.sender.rtmp.RtmpSender;
-import org.yeshen.video.librtmp.unstable.net.sender.sendqueue.SendQueueListener;
-import org.yeshen.video.librtmp.internal.net.packets.Chunkd;
-import org.yeshen.video.librtmp.unstable.tools.Error;
 import org.yeshen.video.librtmp.internal.net.HandshakeHelper;
+import org.yeshen.video.librtmp.internal.net.packets.Chunkd;
+import org.yeshen.video.librtmp.unstable.net.sender.Sender;
+import org.yeshen.video.librtmp.unstable.tools.Error;
+import org.yeshen.video.librtmp.unstable.tools.GlobalAsyncThread;
 import org.yeshen.video.librtmp.unstable.tools.Lg;
 import org.yeshen.video.librtmp.unstable.tools.Options;
 
@@ -21,25 +18,19 @@ import java.nio.channels.SocketChannel;
  *********************************************************************/
 
 
-public class Connector implements Sender, SendQueueListener {
-
-    public static Connector createConnector() {
-        return new Connector();
-    }
+public class Connector implements Sender {
 
     private Reader reader = new Reader();
     private Writer writer = new Writer();
     private SocketChannel channel;
-    private volatile boolean running = false;
-    private RtmpSender.OnSenderListener listener;
 
     public void create() {
     }
 
     public void connect() {
-        new AsyncTask<Boolean, Boolean, Boolean>() {
+        GlobalAsyncThread.post(new Runnable() {
             @Override
-            protected Boolean doInBackground(Boolean... params) {
+            public void run() {
                 try {
                     //start tcp connect
                     InetSocketAddress inetSocketAddress = new InetSocketAddress(
@@ -50,7 +41,6 @@ public class Connector implements Sender, SendQueueListener {
                     channel.configureBlocking(false);
                 } catch (IOException e) {
                     Lg.e(Error.NET, e);
-                    return false;
                 }
 
                 try {
@@ -58,7 +48,6 @@ public class Connector implements Sender, SendQueueListener {
                     new HandshakeHelper().shakeInSequence(channel);
                 } catch (IOException e) {
                     Lg.e(Error.HANDSHAKE, e);
-                    return false;
                 }
 
                 try {
@@ -67,24 +56,9 @@ public class Connector implements Sender, SendQueueListener {
                     writer.start(channel);
                 } catch (IOException e) {
                     Lg.e(Error.CONNECTION, e);
-                    return false;
-                }
-                running = true;
-                return true;
-            }
-
-            @Override
-            protected void onPostExecute(Boolean result) {
-                super.onPostExecute(result);
-                if (listener != null) {
-                    if (result) {
-                        listener.onConnected();
-                    } else {
-                        listener.onPublishFail();
-                    }
                 }
             }
-        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        });
     }
 
     public void write(byte[] data) {
@@ -96,15 +70,6 @@ public class Connector implements Sender, SendQueueListener {
     public void stop() {
         if (reader != null) reader.stop();
         if (writer != null) writer.stop();
-        running = false;
-    }
-
-    public boolean isRunning() {
-        return running;
-    }
-
-    public void setSenderListener(RtmpSender.OnSenderListener listener) {
-        this.listener = listener;
     }
 
     @Override
@@ -114,24 +79,6 @@ public class Connector implements Sender, SendQueueListener {
 
     @Override
     public void onData(byte[] data, int type) {
-
-    }
-
-    @Override
-    public void good() {
-
-    }
-
-    @Override
-    public void bad() {
-
-    }
-
-    public interface ConnectionResult {
-
-        void success();
-
-        void fail(int code, String msg);
 
     }
 
