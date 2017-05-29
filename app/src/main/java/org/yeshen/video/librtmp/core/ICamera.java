@@ -2,9 +2,9 @@ package org.yeshen.video.librtmp.core;
 
 import android.graphics.SurfaceTexture;
 
-import org.yeshen.video.librtmp.afix.Cameras;
-import org.yeshen.video.librtmp.exception.CameraHardwareException;
-import org.yeshen.video.librtmp.exception.CameraNotSupportException;
+import org.yeshen.video.librtmp.unstable.Cameras;
+import org.yeshen.video.librtmp.unstable.exception.CameraHardwareException;
+import org.yeshen.video.librtmp.unstable.exception.CameraNotSupportException;
 
 /*********************************************************************
  * Created by yeshen on 2017/05/28.

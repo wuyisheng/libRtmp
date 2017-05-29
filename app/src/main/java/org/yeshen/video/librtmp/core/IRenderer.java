@@ -4,8 +4,8 @@ import android.graphics.SurfaceTexture;
 import android.opengl.GLSurfaceView;
 import android.support.annotation.NonNull;
 
-import org.yeshen.video.librtmp.afix.MyRecorder;
-import org.yeshen.video.librtmp.core.delegate.CameraOpenDelegate;
+import org.yeshen.video.librtmp.unstable.RecorderImpl;
+import org.yeshen.video.librtmp.core.delegate.ICameraOpenDelegate;
 
 /*********************************************************************
  * Created by yeshen on 2017/05/28.
@@ -27,9 +27,9 @@ public interface IRenderer extends GLSurfaceView.Renderer
     int AUDIO_AEC_ERROR = 7;
     int SDK_VERSION_ERROR = 8;
 
-    void setCameraOpenListener(CameraOpenDelegate cameraOpenListener);
+    void setCameraOpenListener(ICameraOpenDelegate cameraOpenListener);
     void syncVideoConfig();
-    void enableRecord(@NonNull MyRecorder recorder);
+    void enableRecord(@NonNull RecorderImpl recorderImpl);
     void disableRecord();
     int checkStatus();
 }
