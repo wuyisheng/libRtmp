@@ -18,8 +18,8 @@ import java.util.Set;
  * Copyright (c) 2017 yeshen.org. - All Rights Reserved
  *********************************************************************/
 
-class Reader implements Runnable {
-    private static final String TAG = "org.yeshen.video.librtmp.internal.net.carriers.Reader";
+class NReader implements Runnable {
+    private static final String TAG = "org.yeshen.video.librtmp.internal.net.carriers.NReader";
 
     private Selector selector = null;
     private Thread thread = null;
@@ -58,24 +58,22 @@ class Reader implements Runnable {
 
     @Override
     public void run() {
-        try {
-            ByteBuffer buffer = ByteBuffer.allocate(Options.getInstance().bufferSize);
-            while (running) {
-                int num = selector.select();//blocking
-                if (num == 0) {
-                    Set selectedKeys = selector.selectedKeys();
-                    for (Object selectedKey : selectedKeys) {
-                        SelectionKey key = (SelectionKey) selectedKey;
-                        SocketChannel channel = (SocketChannel) key.channel();
-                        channel.read(buffer);
+        ByteBuffer buffer = ByteBuffer.allocate(Options.getInstance().bufferSize);
+        while (running) {
+            try {
+                selector.select();
+                Set selectedKeys = selector.selectedKeys();
+                for (Object selectedKey : selectedKeys) {
+                    SelectionKey key = (SelectionKey) selectedKey;
+                    SocketChannel channel = (SocketChannel) key.channel();
+                    channel.read(buffer);
 
 
-                        //TODO
-                    }
+                    //TODO
                 }
+            } catch (IOException e) {
+                Lg.e(Error.READER, e);
             }
-        } catch (IOException e) {
-            Lg.e(Error.READER, e);
         }
     }
 }

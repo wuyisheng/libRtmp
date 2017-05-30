@@ -1,19 +1,21 @@
 package org.yeshen.video.librtmp.unstable.net.sender.rtmp.io;
 
+import android.annotation.SuppressLint;
 import android.util.Log;
 
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.Abort;
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.Acknowledgement;
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.Audio;
+import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.Chunk;
+import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.ChunkHeader;
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.Command;
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.Data;
-import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.ChunkHeader;
-import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.Chunk;
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.SetChunkSize;
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.SetPeerBandwidth;
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.UserControl;
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.Video;
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.WindowAckSize;
+import org.yeshen.video.librtmp.unstable.tools.Lg;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,27 +25,32 @@ import java.util.HashMap;
  *
  * @author francois
  */
-public class RtmpDecoder {
+class RtmpDecoder {
 
     private static final String TAG = "RtmpDecoder";
 
     private SessionInfo sessionInfo;
 
+    @SuppressLint("UseSparseArrays")
     private HashMap<Integer, StoreChunk> storeChunkHashMap = new HashMap<>();
 
-    public RtmpDecoder(SessionInfo sessionInfo) {
+    RtmpDecoder(SessionInfo sessionInfo) {
         this.sessionInfo = sessionInfo;
     }
 
-    public Chunk readPacket(InputStream in) throws IOException {
+    Chunk readPacket(InputStream in) throws IOException {
 
         ChunkHeader header = ChunkHeader.readHeader(in, sessionInfo);
         Chunk rtmpPacket;
-        Log.d(TAG, "readPacket(): header.messageType: " + header.getMessageType());
+        Lg.d(TAG, "readPacket(): header.messageType: " + header.getMessageType());
 
         int messageLength = header.getPacketLength();
         if (header.getPacketLength() > sessionInfo.getRxChunkSize()) {
-            //Log.d(TAG, "readPacket(): packet size (" + header.getPacketLength() + ") is bigger than chunk size (" + rtmpSessionInfo.getChunkSize() + "); storing chunk data");
+            Lg.d(TAG, "readPacket(): packet size ("
+                    + header.getPacketLength()
+                    + ") is bigger than chunk size ("
+                    + sessionInfo.getRxChunkSize()
+                    + "); storing chunk data");
             // This packet consists of more than one chunk; store the chunks in the chunk stream until everything is read
             StoreChunk storeChunk = storeChunkHashMap.get(header.getChunkStreamId());
             if(storeChunk == null) {
@@ -58,7 +65,11 @@ public class RtmpDecoder {
                 in = storeChunk.getStoredInputStream();
             }
         } else {
-            //Log.d(TAG, "readPacket(): packet size (" + header.getPacketLength() + ") is LESS than chunk size (" + rtmpSessionInfo.getChunkSize() + "); reading packet fully");
+            Lg.d(TAG, "readPacket(): packet size ("
+                    + header.getPacketLength()
+                    + ") is LESS than chunk size ("
+                    + sessionInfo.getRxChunkSize()
+                    + "); reading packet fully");
         }
 
         switch (header.getMessageType()) {
@@ -103,7 +114,7 @@ public class RtmpDecoder {
         return rtmpPacket;
     }
 
-    public void clearStoredChunks(int chunkStreamId) {
+    void clearStoredChunks(int chunkStreamId) {
         StoreChunk storeChunk = storeChunkHashMap.get(chunkStreamId);
         if(storeChunk != null) {
             storeChunk.clearStoredChunks();

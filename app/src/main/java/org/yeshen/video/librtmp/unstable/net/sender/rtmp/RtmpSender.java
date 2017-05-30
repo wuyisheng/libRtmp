@@ -1,5 +1,6 @@
 package org.yeshen.video.librtmp.unstable.net.sender.rtmp;
 
+import org.yeshen.video.librtmp.core.IRtmpConnection;
 import org.yeshen.video.librtmp.unstable.net.packer.rtmp.RtmpPacker;
 import org.yeshen.video.librtmp.unstable.net.sender.Sender;
 import org.yeshen.video.librtmp.unstable.net.sender.rtmp.io.RtmpConnectListener;
@@ -26,7 +27,7 @@ public class RtmpSender implements Sender, SendQueueListener {
         return new RtmpSender();
     }
 
-    private RtmpConnection rtmpConnection;
+    private IRtmpConnection rtmpConnection;
     private String mRtmpUrl;
     private OnSenderListener mListener;
     private WeakHandler mHandler = new WeakHandler();
@@ -84,10 +85,10 @@ public class RtmpSender implements Sender, SendQueueListener {
 
     public void connect() {
         rtmpConnection.setSendQueue(mSendQueue);
+        rtmpConnection.setConnectListener(listener);
         GlobalAsyncThread.post(new Runnable() {
             @Override
             public void run() {
-                rtmpConnection.setConnectListener(listener);
                 rtmpConnection.connect(mRtmpUrl);
             }
         });

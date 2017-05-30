@@ -2,7 +2,7 @@ package org.yeshen.video.librtmp.internal.net.carriers;
 
 import android.os.Process;
 
-import org.yeshen.video.librtmp.internal.net.packets.Chunkd;
+import org.yeshen.video.librtmp.unstable.net.sender.rtmp.packets.Chunk;
 import org.yeshen.video.librtmp.unstable.tools.Error;
 import org.yeshen.video.librtmp.unstable.tools.Lg;
 import org.yeshen.video.librtmp.unstable.tools.Options;
@@ -19,13 +19,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  *********************************************************************/
 
 
-class Writer implements Runnable {
+class NWriter implements Runnable {
 
-    private static final String TAG = "org.yeshen.video.librtmp.internal.net.carriers.Writer";
+    private static final String TAG = "org.yeshen.video.librtmp.internal.net.carriers.NWriter";
 
     private volatile boolean running = false;
     private final Object locker = new Object();
-    private Queue<Chunkd> queue = new ConcurrentLinkedQueue<>();
+    private Queue<Chunk> queue = new ConcurrentLinkedQueue<>();
     private Thread thread = null;
     private SocketChannel channel = null;
 
@@ -43,7 +43,7 @@ class Writer implements Runnable {
         }
     }
 
-    void post(Chunkd data) {
+    void post(Chunk data) {
         queue.offer(data);
         synchronized (locker) {
             locker.notify();
@@ -65,8 +65,9 @@ class Writer implements Runnable {
     private void looper() {
         ByteBuffer byteBuffer = ByteBuffer.allocate(Options.getInstance().bufferSize);
         while (!queue.isEmpty()) {
-            Chunkd top = queue.poll();
-            byteBuffer.put(top.btye());
+            Chunk top = queue.poll();
+            //TODO
+            //byteBuffer.put(top);
         }
         byteBuffer.flip();
 

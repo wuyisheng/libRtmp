@@ -2,6 +2,7 @@ package org.yeshen.video.librtmp.unstable.net.sender.rtmp.io;
 
 import android.util.Log;
 
+import org.yeshen.video.librtmp.core.IRtmpConnection;
 import org.yeshen.video.librtmp.unstable.net.Frame;
 import org.yeshen.video.librtmp.unstable.net.amf.AmfMap;
 import org.yeshen.video.librtmp.unstable.net.amf.AmfNull;
@@ -36,10 +37,10 @@ import java.util.regex.Pattern;
 
 /**
  * Main RTMP connection implementation class
- * 
+ *
  * @author francois, leoma
  */
-public class RtmpConnection implements OnReadListener, OnWriteListener {
+public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteListener {
 
     private static final String TAG = "RtmpConnection";
     private static final Pattern rtmpUrlPattern = Pattern.compile("^rtmp://([^/:]+)(:(\\d+))*/([^/]+)(/(.*))*$");
@@ -60,15 +61,6 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
 
     private boolean publishPermitted;
     private ISendQueue mSendQueue;
-
-    private enum State {
-        INIT,
-        HANDSHAKE,
-        CONNECTING,
-        CREATE_STREAM,
-        PUBLISHING,
-        LIVING
-    }
 
     private static class ConnectData {
         String appName;
@@ -91,8 +83,8 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
     public void connect(String url) {
         state = State.INIT;
         connectData = parseRtmpUrl(url);
-        if(connectData == null) {
-            if(listener != null) {
+        if (connectData == null) {
+            if (listener != null) {
                 listener.onUrlInvalid();
             }
             return;
@@ -108,16 +100,16 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
             socket.connect(socketAddress, 3000);
         } catch (IOException e) {
             e.printStackTrace();
-            if(listener != null) {
+            if (listener != null) {
                 listener.onSocketConnectFail();
             }
             return;
         }
-        if(listener != null) {
+        if (listener != null) {
             listener.onSocketConnectSuccess();
         }
-        BufferedInputStream in = null;
-        BufferedOutputStream out = null;
+        BufferedInputStream in;
+        BufferedOutputStream out;
         state = State.HANDSHAKE;
         try {
             Log.d(TAG, "connect(): socket connection established, doing handhake...");
@@ -128,12 +120,12 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
             e.printStackTrace();
             state = State.INIT;
             clearSocket();
-            if(listener != null) {
+            if (listener != null) {
                 listener.onHandshakeFail();
             }
             return;
         }
-        if(listener != null) {
+        if (listener != null) {
             listener.onHandshakeSuccess();
         }
         sessionInfo = new SessionInfo();
@@ -145,6 +137,62 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
         readThread.start();
         writeThread.start();
         rtmpConnect();
+    }
+
+    public void publishAudioData(byte[] data, int type) {
+        if (currentStreamId == -1) {
+            return;
+        }
+        if (!publishPermitted) {
+            return;
+        }
+        Audio audio = new Audio();
+        audio.setData(data);
+        audio.getChunkHeader().setMessageStreamId(currentStreamId);
+        Frame<Chunk> frame;
+        if (type == RtmpPacker.FIRST_AUDIO) {
+            frame = new Frame(audio, type, Frame.FRAME_TYPE_CONFIGURATION);
+        } else {
+            frame = new Frame(audio, type, Frame.FRAME_TYPE_AUDIO);
+        }
+        mSendQueue.putFrame(frame);
+    }
+
+    public void publishVideoData(byte[] data, int type) {
+        if (currentStreamId == -1) {
+            return;
+        }
+        if (!publishPermitted) {
+            return;
+        }
+        Video video = new Video();
+        video.setData(data);
+        video.getChunkHeader().setMessageStreamId(currentStreamId);
+        Frame<Chunk> frame;
+        if (type == RtmpPacker.FIRST_VIDEO) {
+            frame = new Frame(video, type, Frame.FRAME_TYPE_CONFIGURATION);
+        } else if (type == RtmpPacker.KEY_FRAME) {
+            frame = new Frame(video, type, Frame.FRAME_TYPE_KEY_FRAME);
+        } else {
+            frame = new Frame(video, type, Frame.FRAME_TYPE_INTER_FRAME);
+        }
+        mSendQueue.putFrame(frame);
+    }
+
+    public void stop() {
+        closeStream();
+        if (readThread != null) {
+            readThread.setOnReadListener(null);
+            readThread.shutdown();
+        }
+        if (writeThread != null) {
+            writeThread.setWriteListener(null);
+            writeThread.shutdown();
+        }
+        clearSocket();
+        currentStreamId = -1;
+        transactionIdCounter = 0;
+        state = State.INIT;
     }
 
     private ConnectData parseRtmpUrl(String url) {
@@ -206,55 +254,6 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
         Frame<Chunk> frame = new Frame(invoke, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
         mSendQueue.putFrame(frame);
         state = State.CONNECTING;
-    }
-
-    @Override
-    public void onChunkRead(Chunk chunk) {
-        ChunkHeader chunkHeader = chunk.getChunkHeader();
-        MessageType messageType = chunkHeader.getMessageType();
-        switch (messageType) {
-            case ABORT:
-                readThread.clearStoredChunks(((Abort) chunk).getChunkStreamId());
-                break;
-            case USER_CONTROL_MESSAGE:
-                UserControl ping = (UserControl) chunk;
-                if(ping.getType() == UserControl.Type.PING_REQUEST) {
-                    Log.d(TAG, "Sending PONG reply..");
-                    UserControl pong = new UserControl();
-                    pong.setType(UserControl.Type.PONG_REPLY);
-                    pong.setEventData(ping.getEventData()[0]);
-                    Frame<Chunk> frame = new Frame(pong, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
-                    mSendQueue.putFrame(frame);
-                } else if(ping.getType() == UserControl.Type.STREAM_EOF) {
-                    Log.d(TAG, "Stream EOF reached");
-                }
-                break;
-            case WINDOW_ACKNOWLEDGEMENT_SIZE:
-                WindowAckSize windowAckSize = (WindowAckSize) chunk;
-                int size = windowAckSize.getAcknowledgementWindowSize();
-                Log.d(TAG, "Setting acknowledgement window size: " + size);
-                sessionInfo.setAcknowledgmentWindowSize(size);
-                // Set socket option
-                try {
-                    socket.setSendBufferSize(size);
-                } catch (SocketException e) {
-                    e.printStackTrace();
-                }
-                break;
-            case SET_PEER_BANDWIDTH:
-                int acknowledgementWindowsize = sessionInfo.getAcknowledgementWindowSize();
-                Log.d(TAG, "Send acknowledgement window size: " + acknowledgementWindowsize);
-                Chunk setPeerBandwidth = new WindowAckSize(acknowledgementWindowsize);
-                Frame<Chunk> frame = new Frame(setPeerBandwidth, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
-                mSendQueue.putFrame(frame);
-                break;
-            case COMMAND_AMF0:
-                handleRxCommandInvoke((Command) chunk);
-                break;
-            default:
-                Log.w(TAG, "Not handling unimplemented/unknown packet of type: " + chunkHeader.getMessageType());
-                break;
-        }
     }
 
     private void handleRxCommandInvoke(Command command) {
@@ -399,46 +398,6 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
         isAudioStereo = isStereo;
     }
 
-    public void publishAudioData(byte[] data, int type) {
-        if (currentStreamId == -1) {
-            return;
-        }
-        if (!publishPermitted) {
-            return;
-        }
-        Audio audio = new Audio();
-        audio.setData(data);
-        audio.getChunkHeader().setMessageStreamId(currentStreamId);
-        Frame<Chunk> frame;
-        if(type == RtmpPacker.FIRST_AUDIO) {
-            frame = new Frame(audio, type, Frame.FRAME_TYPE_CONFIGURATION);
-        } else {
-            frame = new Frame(audio, type, Frame.FRAME_TYPE_AUDIO);
-        }
-        mSendQueue.putFrame(frame);
-    }
-
-    public void publishVideoData(byte[] data, int type) {
-        if (currentStreamId == -1) {
-            return;
-        }
-        if (!publishPermitted) {
-            return;
-        }
-        Video video = new Video();
-        video.setData(data);
-        video.getChunkHeader().setMessageStreamId(currentStreamId);
-        Frame<Chunk> frame;
-        if(type == RtmpPacker.FIRST_VIDEO) {
-            frame = new Frame(video, type, Frame.FRAME_TYPE_CONFIGURATION);
-        } else if(type == RtmpPacker.KEY_FRAME){
-            frame = new Frame(video, type, Frame.FRAME_TYPE_KEY_FRAME);
-        } else {
-            frame = new Frame(video, type, Frame.FRAME_TYPE_INTER_FRAME);
-        }
-        mSendQueue.putFrame(frame);
-    }
-
     private void closeStream() throws IllegalStateException {
         if (currentStreamId == -1) {
             return;
@@ -455,30 +414,60 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
         mSendQueue.putFrame(frame);
     }
 
-    public void stop() {
-        closeStream();
-        if(readThread != null) {
-            readThread.setOnReadListener(null);
-            readThread.shutdown();
-        }
-        if(writeThread != null) {
-            writeThread.setWriteListener(null);
-            writeThread.shutdown();
-        }
-        clearSocket();
-        currentStreamId = -1;
-        transactionIdCounter = 0;
-        state = State.INIT;
-    }
 
-    public State getState() {
-        return state;
+    @Override
+    public void onChunkRead(Chunk chunk) {
+        ChunkHeader chunkHeader = chunk.getChunkHeader();
+        MessageType messageType = chunkHeader.getMessageType();
+        switch (messageType) {
+            case ABORT:
+                readThread.clearStoredChunks(((Abort) chunk).getChunkStreamId());
+                break;
+            case USER_CONTROL_MESSAGE:
+                UserControl ping = (UserControl) chunk;
+                if (ping.getType() == UserControl.Type.PING_REQUEST) {
+                    Log.d(TAG, "Sending PONG reply..");
+                    UserControl pong = new UserControl();
+                    pong.setType(UserControl.Type.PONG_REPLY);
+                    pong.setEventData(ping.getEventData()[0]);
+                    Frame<Chunk> frame = new Frame(pong, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+                    mSendQueue.putFrame(frame);
+                } else if (ping.getType() == UserControl.Type.STREAM_EOF) {
+                    Log.d(TAG, "Stream EOF reached");
+                }
+                break;
+            case WINDOW_ACKNOWLEDGEMENT_SIZE:
+                WindowAckSize windowAckSize = (WindowAckSize) chunk;
+                int size = windowAckSize.getAcknowledgementWindowSize();
+                Log.d(TAG, "Setting acknowledgement window size: " + size);
+                sessionInfo.setAcknowledgmentWindowSize(size);
+                // Set socket option
+                try {
+                    socket.setSendBufferSize(size);
+                } catch (SocketException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case SET_PEER_BANDWIDTH:
+                int acknowledgementWindowsize = sessionInfo.getAcknowledgementWindowSize();
+                Log.d(TAG, "Send acknowledgement window size: " + acknowledgementWindowsize);
+                Chunk setPeerBandwidth = new WindowAckSize(acknowledgementWindowsize);
+                Frame<Chunk> frame = new Frame(setPeerBandwidth, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+                mSendQueue.putFrame(frame);
+                break;
+            case COMMAND_AMF0:
+                handleRxCommandInvoke((Command) chunk);
+                break;
+            default:
+                Log.w(TAG, "Not handling unimplemented/unknown packet of type: " + chunkHeader.getMessageType());
+                break;
+        }
     }
 
     @Override
     public void onStreamEnd() {
         stop();
-        if(listener != null) {
+        if (listener != null) {
             listener.onStreamEnd();
         }
     }
@@ -486,7 +475,7 @@ public class RtmpConnection implements OnReadListener, OnWriteListener {
     @Override
     public void onDisconnect() {
         stop();
-        if(listener != null) {
+        if (listener != null) {
             listener.onSocketDisconnect();
         }
     }

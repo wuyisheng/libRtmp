@@ -13,22 +13,21 @@ import java.io.OutputStream;
  * 
  * @author francois, leo
  */
-public class WriteThread extends Thread {
+class WriteThread extends Thread {
 
-    private static final String TAG = "WriteThread";
     private OutputStream out;
     private SessionInfo sessionInfo;
     private OnWriteListener listener;
     private ISendQueue mSendQueue;
     private volatile boolean startFlag;
 
-    public WriteThread(OutputStream out, SessionInfo sessionInfo) {
+    WriteThread(OutputStream out, SessionInfo sessionInfo) {
         this.out = out;
         this.sessionInfo = sessionInfo;
         this.startFlag = true;
     }
 
-    public void setWriteListener(OnWriteListener listener) {
+    void setWriteListener(OnWriteListener listener) {
         this.listener = listener;
     }
 
@@ -55,11 +54,11 @@ public class WriteThread extends Thread {
         }
     }
 
-    public void setSendQueue(ISendQueue sendQueue) {
+    void setSendQueue(ISendQueue sendQueue) {
         mSendQueue = sendQueue;
     }
 
-    public void shutdown() {
+    void shutdown() {
         listener = null;
         startFlag = false;
         this.interrupt();

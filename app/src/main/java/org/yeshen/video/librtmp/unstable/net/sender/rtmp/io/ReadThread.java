@@ -11,22 +11,20 @@ import java.io.InputStream;
  * 
  * @author francois, leo
  */
-public class ReadThread extends Thread {
-
-    private static final String TAG = "ReadThread";
+class ReadThread extends Thread {
 
     private RtmpDecoder rtmpDecoder;
     private InputStream in;
     private OnReadListener listener;
     private volatile boolean startFlag;
 
-    public ReadThread(InputStream in, SessionInfo sessionInfo) {
+    ReadThread(InputStream in, SessionInfo sessionInfo) {
         this.in = in;
         this.rtmpDecoder = new RtmpDecoder(sessionInfo);
         startFlag = true;
     }
 
-    public void setOnReadListener(OnReadListener listener) {
+    void setOnReadListener(OnReadListener listener) {
         this.listener = listener;
     }
 
@@ -52,13 +50,13 @@ public class ReadThread extends Thread {
         }
     }
 
-    public void shutdown() {
+    void shutdown() {
         listener = null;
         startFlag = false;
         this.interrupt();
     }
 
-    public void clearStoredChunks(int chunkStreamId) {
+    void clearStoredChunks(int chunkStreamId) {
         rtmpDecoder.clearStoredChunks(chunkStreamId);
     }
 }
