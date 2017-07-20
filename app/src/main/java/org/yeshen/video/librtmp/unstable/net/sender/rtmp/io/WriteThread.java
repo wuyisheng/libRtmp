@@ -35,7 +35,7 @@ class WriteThread extends Thread {
     public void run() {
         while (startFlag) {
             try {
-                Frame<Chunk> frame = mSendQueue.takeFrame();
+                Frame frame = mSendQueue.takeFrame();
                 if(frame != null) {
                     Chunk chunk = frame.data;
                     chunk.writeTo(out, sessionInfo);

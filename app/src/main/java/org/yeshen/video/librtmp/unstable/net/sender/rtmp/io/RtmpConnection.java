@@ -149,7 +149,7 @@ public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteLi
         Audio audio = new Audio();
         audio.setData(data);
         audio.getChunkHeader().setMessageStreamId(currentStreamId);
-        Frame<Chunk> frame;
+        Frame frame;
         if (type == RtmpPacker.FIRST_AUDIO) {
             frame = new Frame(audio, type, Frame.FRAME_TYPE_CONFIGURATION);
         } else {
@@ -168,7 +168,7 @@ public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteLi
         Video video = new Video();
         video.setData(data);
         video.getChunkHeader().setMessageStreamId(currentStreamId);
-        Frame<Chunk> frame;
+        Frame frame;
         if (type == RtmpPacker.FIRST_VIDEO) {
             frame = new Frame(video, type, Frame.FRAME_TYPE_CONFIGURATION);
         } else if (type == RtmpPacker.KEY_FRAME) {
@@ -251,7 +251,7 @@ public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteLi
         args.setProperty("pageUrl", connectData.pageUrl);
         args.setProperty("objectEncoding", 0);
         invoke.addData(args);
-        Frame<Chunk> frame = new Frame(invoke, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+        Frame frame = new Frame(invoke, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
         mSendQueue.putFrame(frame);
         state = State.CONNECTING;
     }
@@ -325,7 +325,7 @@ public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteLi
         releaseStream.getChunkHeader().setChunkStreamId(SessionInfo.RTMP_STREAM_CHANNEL);
         releaseStream.addData(new AmfNull());  // command object: null for "createStream"
         releaseStream.addData(connectData.streamName);  // command object: null for "releaseStream"
-        Frame<Chunk> frame1 = new Frame(releaseStream, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+        Frame frame1 = new Frame(releaseStream, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
         mSendQueue.putFrame(frame1);
 
         Log.d(TAG, "createStream(): Sending FCPublish command...");
@@ -334,14 +334,14 @@ public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteLi
         FCPublish.getChunkHeader().setChunkStreamId(SessionInfo.RTMP_STREAM_CHANNEL);
         FCPublish.addData(new AmfNull());  // command object: null for "FCPublish"
         FCPublish.addData(connectData.streamName);
-        Frame<Chunk> frame2 = new Frame(FCPublish, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+        Frame frame2 = new Frame(FCPublish, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
         mSendQueue.putFrame(frame2);
 
         Log.d(TAG, "createStream(): Sending createStream command...");
         // transactionId == 4
         Command createStream = new Command("createStream", ++transactionIdCounter);
         createStream.addData(new AmfNull());  // command object: null for "createStream"
-        Frame<Chunk> frame3 = new Frame(createStream, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+        Frame frame3 = new Frame(createStream, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
         mSendQueue.putFrame(frame3);
     }
 
@@ -358,7 +358,7 @@ public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteLi
         publish.addData(new AmfNull());  // command object: null for "publish"
         publish.addData(connectData.streamName);
         publish.addData("live");
-        Frame<Chunk> frame = new Frame(publish, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+        Frame frame = new Frame(publish, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
         mSendQueue.putFrame(frame);
     }
 
@@ -383,7 +383,7 @@ public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteLi
         ecmaArray.setProperty("stereo", isAudioStereo);
         ecmaArray.setProperty("filesize", 0);
         metadata.addData(ecmaArray);
-        Frame<Chunk> frame = new Frame(metadata, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+        Frame frame = new Frame(metadata, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
         mSendQueue.putFrame(frame);
     }
 
@@ -410,7 +410,7 @@ public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteLi
         closeStream.getChunkHeader().setChunkStreamId(SessionInfo.RTMP_STREAM_CHANNEL);
         closeStream.getChunkHeader().setMessageStreamId(currentStreamId);
         closeStream.addData(new AmfNull());
-        Frame<Chunk> frame = new Frame(closeStream, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+        Frame frame = new Frame(closeStream, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
         mSendQueue.putFrame(frame);
     }
 
@@ -430,7 +430,7 @@ public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteLi
                     UserControl pong = new UserControl();
                     pong.setType(UserControl.Type.PONG_REPLY);
                     pong.setEventData(ping.getEventData()[0]);
-                    Frame<Chunk> frame = new Frame(pong, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+                    Frame frame = new Frame(pong, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
                     mSendQueue.putFrame(frame);
                 } else if (ping.getType() == UserControl.Type.STREAM_EOF) {
                     Log.d(TAG, "Stream EOF reached");
@@ -452,7 +452,7 @@ public class RtmpConnection implements IRtmpConnection,OnReadListener, OnWriteLi
                 int acknowledgementWindowsize = sessionInfo.getAcknowledgementWindowSize();
                 Log.d(TAG, "Send acknowledgement window size: " + acknowledgementWindowsize);
                 Chunk setPeerBandwidth = new WindowAckSize(acknowledgementWindowsize);
-                Frame<Chunk> frame = new Frame(setPeerBandwidth, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
+                Frame frame = new Frame(setPeerBandwidth, RtmpPacker.CONFIGRATION, Frame.FRAME_TYPE_CONFIGURATION);
                 mSendQueue.putFrame(frame);
                 break;
             case COMMAND_AMF0:
